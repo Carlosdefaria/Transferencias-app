@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Control de Transferencias</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+    <h1>Control de Transferencias</h1>
+    <p id="mensaje" style="color: green;"></p>
+
+    <h2>Resumen</h2>
+
+    <p>Total: <span id="total">0</span> €</p>
+    <p>Objetivo: <span id="objetivo">0</span> €</p>
+    <p>Restante: <span id="restante">0</span> €</p>
+
+    <h3>Progreso</h3>
+
+    <div id="barra-container">
+        <div id="barra-progreso"></div>
+    </div>
+
+    <p id="texto-progreso"></p>
+
+    <h2>Agregar transferencia</h2>
+
+    <input type="number" id="monto" placeholder="Monto"><br><br>
+    <input type="date" id="fecha"><br><br>
+    <input type="text" id="descripcion" placeholder="Descripción"><br><br>
+
+    <button onclick="agregarTransferencia()">Agregar</button>
+
+    <h2>Historial</h2>
+    <ul id="lista-transferencias"></ul>
+
+    <script>
+    async function cargarResumen() {
+        const respuesta = await fetch("/resumen");
+        const data = await respuesta.json();
+
+        document.getElementById("total").innerText = data.total;
+        document.getElementById("objetivo").innerText = data.objetivo;
+        document.getElementById("restante").innerText = data.restante;
+
+        let porcentaje = data.objetivo > 0 
+            ? (data.total / data.objetivo) * 100 
+            : 0;
+
+        if (porcentaje > 100) porcentaje = 100;
+
+        const barra = document.getElementById("barra-progreso");
+
+        barra.style.width = porcentaje + "%";
+
+        if (porcentaje < 40) {
+            barra.style.backgroundColor = "red";
+        } else if (porcentaje < 80) {
+            barra.style.backgroundColor = "orange";
+        } else {
+            barra.style.backgroundColor = "green";
+        }
+
+        document.getElementById("texto-progreso").innerText = 
+            `${data.total}€ / ${data.objetivo}€`;
+    }
+
+    async function cargarTransferencias() {
+        const respuesta = await fetch("/transferencias");
+        const data = await respuesta.json();
+
+        console.log(data);
+
+        const lista = document.getElementById("lista-transferencias");
+        lista.innerHTML = "";
+
+        data.forEach(t => {
+            const item = document.createElement("li");
+
+        item.innerHTML = `
+            <span>${t.monto}€ | ${t.fecha} | ${t.descripcion}</span>
+            <button class="btn-eliminar" onclick="eliminarTransferencia(${t.id})">X</button>
+        `;
+
+            lista.appendChild(item);
+        });
+    }
+
+    async function agregarTransferencia() {
+        const monto = document.getElementById("monto").value;
+        const fecha = document.getElementById("fecha").value;
+        const descripcion = document.getElementById("descripcion").value;
+
+        const mensaje = document.getElementById("mensaje");
+
+        // VALIDACIÓN
+        if (!monto || !fecha) {
+            mensaje.style.color = "red";
+            mensaje.innerText = "Monto y fecha son obligatorios";
+            return;
+        }
+
+        await fetch("/transferencias", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                monto: parseFloat(monto),
+                fecha: fecha,
+                descripcion: descripcion
+            })
+        });
+
+        // MENSAJE OK
+        mensaje.style.color = "green";
+        mensaje.innerText = "Transferencia agregada correctamente";
+
+        // limpiar inputs
+        document.getElementById("monto").value = "";
+        document.getElementById("fecha").value = "";
+        document.getElementById("descripcion").value = "";
+
+        cargarResumen();
+        cargarTransferencias();
+    }
+
+
+    async function eliminarTransferencia(id) {
+        const confirmar = confirm("¿Seguro que quieres eliminar esta transferencia?");
+
+        if (!confirmar) return;
+
+        await fetch(`/transferencias/${id}`, {
+            method: "DELETE"
+        });
+
+        const mensaje = document.getElementById("mensaje");
+        mensaje.style.color = "green";
+        mensaje.innerText = "Transferencia eliminada";
+
+        cargarResumen();
+        cargarTransferencias();
+    }
+
+    cargarResumen();
+    cargarTransferencias();
+</script>
+
+</body>
+</html>
