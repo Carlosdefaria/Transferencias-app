@@ -10,10 +10,23 @@ app = Flask(__name__)
 
 
 def get_db_connection():
-    conn = sqlite3.connect("database.db")
-    conn.row_factory = sqlite3.Row
-    return conn
+    database_url = os.environ.get("DATABASE_URL")
 
+    # 👉 Si estamos en producción (Render)
+    if database_url:
+        # fix postgres:// → postgresql://
+        if database_url.startswith("postgres://"):
+            database_url = database_url.replace(
+                "postgres://", "postgresql://", 1)
+
+        conn = psycopg2.connect(database_url)
+        return conn
+
+    # 👉 Si estamos en local (SQLite)
+    else:
+        conn = sqlite3.connect("database.db")
+        conn.row_factory = sqlite3.Row
+        return conn
 # ------------------------
 # INIT DB
 # ------------------------
