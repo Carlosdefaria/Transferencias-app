@@ -1,4 +1,6 @@
 import sqlite3
+import os
+import psycopg2
 from flask import Flask, request, jsonify, render_template
 from datetime import datetime
 
@@ -27,6 +29,8 @@ def get_db_connection():
         conn = sqlite3.connect("database.db")
         conn.row_factory = sqlite3.Row
         return conn
+
+
 # ------------------------
 # INIT DB
 # ------------------------
@@ -87,11 +91,15 @@ def crear_transferencia():
         return jsonify({"error": "Faltan datos"}), 400
 
     conn = get_db_connection()
-    conn.execute(
-        "INSERT INTO transferencias (monto, fecha, descripcion) VALUES (?, ?, ?)",
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "INSERT INTO transferencias (monto, fecha, descripcion) VALUES (%s, %s, %s)",
         (monto, fecha, descripcion)
     )
+
     conn.commit()
+    cursor.close()
     conn.close()
 
     return jsonify({"mensaje": "Transferencia creada"})
@@ -100,17 +108,22 @@ def crear_transferencia():
 @app.route("/transferencias", methods=["GET"])
 def obtener_transferencias():
     conn = get_db_connection()
-    transferencias = conn.execute("SELECT * FROM transferencias").fetchall()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT id, monto, fecha, descripcion FROM transferencias")
+    filas = cursor.fetchall()
+
+    cursor.close()
     conn.close()
 
     resultado = []
 
-    for t in transferencias:
+    for fila in filas:
         resultado.append({
-            "id": t["id"],
-            "monto": t["monto"],
-            "fecha": t["fecha"],
-            "descripcion": t["descripcion"]
+            "id": fila[0],
+            "monto": fila[1],
+            "fecha": fila[2],
+            "descripcion": fila[3]
         })
 
     return jsonify(resultado)
