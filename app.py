@@ -1,6 +1,6 @@
 import sqlite3
 import os
-import psycopg2
+import psycopg
 from flask import Flask, request, jsonify, render_template
 from datetime import datetime
 
@@ -21,7 +21,7 @@ def get_db_connection():
             database_url = database_url.replace(
                 "postgres://", "postgresql://", 1)
 
-        conn = psycopg2.connect(database_url)
+        conn = psycopg.connect(database_url)
         return conn
 
     # 👉 Si estamos en local (SQLite)
@@ -146,7 +146,6 @@ def obtener_resumen():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    from datetime import datetime
     hoy = datetime.now()
     mes_actual = hoy.strftime("%Y-%m")
 
