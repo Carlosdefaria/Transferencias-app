@@ -6,6 +6,7 @@ from datetime import datetime
 
 app = Flask(__name__)
 
+
 # ------------------------
 # DB CONNECTION
 # ------------------------
@@ -29,6 +30,40 @@ def get_db_connection():
         conn = sqlite3.connect("database.db")
         conn.row_factory = sqlite3.Row
         return conn
+
+
+def crear_tablas_postgres():
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    # Tabla transferencias
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS transferencias (
+            id SERIAL PRIMARY KEY,
+            monto FLOAT NOT NULL,
+            fecha DATE NOT NULL,
+            descripcion TEXT
+        );
+    """)
+
+    # Tabla config
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS config (
+            id SERIAL PRIMARY KEY,
+            objetivo_total FLOAT
+        );
+    """)
+
+    # Insert inicial si no existe
+    cur.execute("SELECT COUNT(*) FROM config")
+    count = cur.fetchone()[0]
+
+    if count == 0:
+        cur.execute("INSERT INTO config (objetivo_total) VALUES (1070)")
+
+    conn.commit()
+    cur.close()
+    conn.close()
 
 
 # ------------------------
@@ -133,9 +168,11 @@ def obtener_transferencias():
 def eliminar_transferencia(id):
     conn = get_db_connection()
 
-    conn.execute("DELETE FROM transferencias WHERE id = ?", (id,))
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM transferencias WHERE id = ?", (id,))
 
     conn.commit()
+    cursor.close()
     conn.close()
 
     return jsonify({"mensaje": "Transferencia eliminada"})
@@ -201,5 +238,5 @@ def guardar_objetivo():
 # RUN APP
 # ------------------------
 if __name__ == "__main__":
-    init_db()
+    crear_tablas_postgres()
     app.run(host="0.0.0.0", port=5000)
