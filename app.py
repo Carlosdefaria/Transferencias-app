@@ -144,32 +144,33 @@ def eliminar_transferencia(id):
 @app.route("/resumen", methods=["GET"])
 def obtener_resumen():
     conn = get_db_connection()
+    cursor = conn.cursor()
 
     from datetime import datetime
-
     hoy = datetime.now()
     mes_actual = hoy.strftime("%Y-%m")
 
-    total = conn.execute(
-        "SELECT SUM(monto) as total FROM transferencias WHERE fecha LIKE ?",
+    # TOTAL DEL MES
+    cursor.execute(
+        "SELECT COALESCE(SUM(monto), 0) FROM transferencias WHERE fecha LIKE %s",
         (f"{mes_actual}%",)
-    ).fetchone()
+    )
+    total = cursor.fetchone()[0]
 
-    # objetivo
-    objetivo = conn.execute(
-        "SELECT objetivo_total FROM config LIMIT 1"
-    ).fetchone()
+    # OBJETIVO
+    cursor.execute("SELECT objetivo_total FROM config LIMIT 1")
+    objetivo_row = cursor.fetchone()
 
+    objetivo = objetivo_row[0] if objetivo_row else 0
+
+    restante = objetivo - total
+
+    cursor.close()
     conn.close()
 
-    total_valor = total["total"] if total["total"] else 0
-    objetivo_valor = objetivo["objetivo_total"] if objetivo else 0
-
-    restante = objetivo_valor - total_valor
-
     return jsonify({
-        "total": total_valor,
-        "objetivo": objetivo_valor,
+        "total": total,
+        "objetivo": objetivo,
         "restante": restante
     })
 
