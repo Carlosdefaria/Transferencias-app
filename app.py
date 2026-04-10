@@ -124,6 +124,21 @@ def crear_transferencia():
 
     monto = data.get("monto")
     fecha = data.get("fecha")
+    descripcion = data.get("descripcion", "")
+
+    # Validaciones
+    try:
+        monto = float(monto)
+        if monto <= 0:
+            return jsonify({"error": "El monto debe ser mayor a 0"}), 400
+    except:
+        return jsonify({"error": "Monto inválido"}), 400
+
+    try:
+        datetime.strptime(fecha, "%Y-%m-%d")
+    except:
+        return jsonify({"error": "Fecha inválida"}), 400
+
     descripcion = data.get("descripcion")
 
     if not monto or not fecha:
