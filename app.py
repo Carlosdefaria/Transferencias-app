@@ -66,6 +66,10 @@ def crear_tablas_postgres():
     conn.close()
 
 
+with app.app_context():
+    crear_tablas_postgres()
+
+
 # ------------------------
 # INIT DB
 # ------------------------
@@ -169,7 +173,7 @@ def eliminar_transferencia(id):
     conn = get_db_connection()
 
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM transferencias WHERE id = ?", (id,))
+    cursor.execute("DELETE FROM transferencias WHERE id = %s", (id,))
 
     conn.commit()
     cursor.close()
@@ -188,8 +192,12 @@ def obtener_resumen():
 
     # TOTAL DEL MES
     cursor.execute(
-        "SELECT COALESCE(SUM(monto), 0) FROM transferencias WHERE fecha LIKE %s",
-        (f"{mes_actual}%",)
+        """
+        SELECT COALESCE(SUM(monto), 0)
+        FROM transferencias
+        WHERE TO_CHAR(fecha, 'YYYY-MM') = %s
+        """,
+        (mes_actual,)
     )
     total = cursor.fetchone()[0]
 
@@ -232,11 +240,3 @@ def guardar_objetivo():
     conn.close()
 
     return jsonify({"mensaje": "Objetivo guardado"})
-
-
-# ------------------------
-# RUN APP
-# ------------------------
-if __name__ == "__main__":
-    crear_tablas_postgres()
-    app.run(host="0.0.0.0", port=5000)
