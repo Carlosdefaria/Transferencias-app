@@ -129,10 +129,11 @@ def crear_transferencia():
     # Validaciones
     try:
         monto = float(monto)
-        if monto <= 0:
-            return jsonify({"error": "El monto debe ser mayor a 0"}), 400
     except:
         return jsonify({"error": "Monto inválido"}), 400
+
+    if monto <= 0:
+        return jsonify({"error": "El monto debe ser mayor a 0"}), 400
 
     try:
         datetime.strptime(fecha, "%Y-%m-%d")
@@ -236,22 +237,27 @@ def obtener_resumen():
 
 @app.route("/objetivo", methods=["POST"])
 def guardar_objetivo():
-    data = request.get_json()
-    objetivo = data.get("objetivo")
+    try:
+        data = request.get_json()
+        objetivo = data.get("objetivo")
 
-    if not objetivo:
-        return jsonify({"error": "Falta el objetivo"}), 400
+        if not objetivo or objetivo <= 0:
+            return jsonify({"error": "Objetivo inválido"}), 400
 
-    conn = get_db_connection()
+        conn = get_db_connection()
 
-    conn.execute("DELETE FROM config")
+        with conn.cursor() as cursor:
+            cursor.execute("DELETE FROM config")
+            cursor.execute(
+                "INSERT INTO config (objetivo_total) VALUES (%s)",
+                (objetivo,)
+            )
 
-    conn.execute(
-        "INSERT INTO config (objetivo_total) VALUES (?)",
-        (objetivo,)
-    )
+        conn.commit()
+        conn.close()
 
-    conn.commit()
-    conn.close()
+        return jsonify({"mensaje": "Objetivo guardado"})
 
-    return jsonify({"mensaje": "Objetivo guardado"})
+    except Exception as e:
+        print("ERROR OBJETIVO:", e)
+        return jsonify({"error": "Error interno"}), 500
