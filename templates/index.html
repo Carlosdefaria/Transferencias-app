@@ -88,21 +88,22 @@
         });
     }
 
-    async function agregarTransferencia() {
-        const monto = document.getElementById("monto").value;
-        const fecha = document.getElementById("fecha").value;
-        const descripcion = document.getElementById("descripcion").value;
+async function agregarTransferencia() {
+    const monto = document.getElementById("monto").value;
+    const fecha = document.getElementById("fecha").value;
+    const descripcion = document.getElementById("descripcion").value;
 
-        const mensaje = document.getElementById("mensaje");
+    const mensaje = document.getElementById("mensaje");
 
-        // VALIDACIÓN
-        if (!monto || !fecha) {
-            mensaje.style.color = "red";
-            mensaje.innerText = "Monto y fecha son obligatorios";
-            return;
-        }
+    // VALIDACIÓN FRONT
+    if (!monto || !fecha) {
+        mensaje.style.color = "red";
+        mensaje.innerText = "Monto y fecha son obligatorios";
+        return;
+    }
 
-        await fetch("/transferencias", {
+    try {
+        const response = await fetch("/transferencias", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -114,7 +115,16 @@
             })
         });
 
-        // MENSAJE OK
+        const data = await response.json();
+
+        // 👉 SI HAY ERROR DEL BACKEND
+        if (!response.ok) {
+            mensaje.style.color = "red";
+            mensaje.innerText = data.error || "Error al agregar transferencia";
+            return;
+        }
+
+        // 👉 OK REAL
         mensaje.style.color = "green";
         mensaje.innerText = "Transferencia agregada correctamente";
 
@@ -125,7 +135,12 @@
 
         cargarResumen();
         cargarTransferencias();
+
+    } catch (error) {
+        mensaje.style.color = "red";
+        mensaje.innerText = "Error de conexión";
     }
+}
 
 
     async function eliminarTransferencia(id) {
