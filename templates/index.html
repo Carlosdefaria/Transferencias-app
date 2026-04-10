@@ -8,85 +8,87 @@
 </head>
 <body>
 
-    <h1>Control de Transferencias</h1>
-    <p id="mensaje" style="color: green;"></p>
+<h1>Control de Transferencias</h1>
+<p id="mensaje" style="color: green;"></p>
 
-    <h2>Resumen</h2>
+<h2>Resumen</h2>
 
-    <p>Total: <span id="total">0</span> €</p>
-    <p>Objetivo: <span id="objetivo">0</span> €</p>
-    <p>Restante: <span id="restante">0</span> €</p>
+<p>Total: <span id="total">0</span> €</p>
+<p>Objetivo: <span id="objetivo">0</span> €</p>
+<p>Restante: <span id="restante">0</span> €</p>
 
-    <h3>Progreso</h3>
+<h3>Actualizar objetivo</h3>
+<input type="number" id="nuevo-objetivo" placeholder="Nuevo objetivo">
+<button onclick="guardarObjetivo()">Guardar objetivo</button>
 
-    <div id="barra-container">
-        <div id="barra-progreso"></div>
-    </div>
+<h3>Progreso</h3>
 
-    <p id="texto-progreso"></p>
+<div id="barra-container">
+    <div id="barra-progreso"></div>
+</div>
 
-    <h2>Agregar transferencia</h2>
+<p id="texto-progreso"></p>
 
-    <input type="number" id="monto" placeholder="Monto"><br><br>
-    <input type="date" id="fecha"><br><br>
-    <input type="text" id="descripcion" placeholder="Descripción"><br><br>
+<h2>Agregar transferencia</h2>
 
-    <button onclick="agregarTransferencia()">Agregar</button>
+<input type="number" id="monto" placeholder="Monto"><br><br>
+<input type="date" id="fecha"><br><br>
+<input type="text" id="descripcion" placeholder="Descripción"><br><br>
 
-    <h2>Historial</h2>
-    <ul id="lista-transferencias"></ul>
+<button onclick="agregarTransferencia()">Agregar</button>
 
-    <script>
-    async function cargarResumen() {
-        const respuesta = await fetch("/resumen");
-        const data = await respuesta.json();
+<h2>Historial</h2>
+<ul id="lista-transferencias"></ul>
 
-        document.getElementById("total").innerText = data.total;
-        document.getElementById("objetivo").innerText = data.objetivo;
-        document.getElementById("restante").innerText = data.restante;
+<script>
 
-        let porcentaje = data.objetivo > 0 
-            ? (data.total / data.objetivo) * 100 
-            : 0;
+async function cargarResumen() {
+    const respuesta = await fetch("/resumen");
+    const data = await respuesta.json();
 
-        if (porcentaje > 100) porcentaje = 100;
+    document.getElementById("total").innerText = data.total;
+    document.getElementById("objetivo").innerText = data.objetivo;
+    document.getElementById("restante").innerText = data.restante;
 
-        const barra = document.getElementById("barra-progreso");
+    let porcentaje = data.objetivo > 0 
+        ? (data.total / data.objetivo) * 100 
+        : 0;
 
-        barra.style.width = porcentaje + "%";
+    if (porcentaje > 100) porcentaje = 100;
 
-        if (porcentaje < 40) {
-            barra.style.backgroundColor = "red";
-        } else if (porcentaje < 80) {
-            barra.style.backgroundColor = "orange";
-        } else {
-            barra.style.backgroundColor = "green";
-        }
+    const barra = document.getElementById("barra-progreso");
+    barra.style.width = porcentaje + "%";
 
-        document.getElementById("texto-progreso").innerText = 
-            `${data.total}€ / ${data.objetivo}€`;
+    if (porcentaje < 40) {
+        barra.style.backgroundColor = "red";
+    } else if (porcentaje < 80) {
+        barra.style.backgroundColor = "orange";
+    } else {
+        barra.style.backgroundColor = "green";
     }
 
-    async function cargarTransferencias() {
-        const respuesta = await fetch("/transferencias");
-        const data = await respuesta.json();
+    document.getElementById("texto-progreso").innerText = 
+        `${data.total}€ / ${data.objetivo}€`;
+}
 
-        console.log(data);
+async function cargarTransferencias() {
+    const respuesta = await fetch("/transferencias");
+    const data = await respuesta.json();
 
-        const lista = document.getElementById("lista-transferencias");
-        lista.innerHTML = "";
+    const lista = document.getElementById("lista-transferencias");
+    lista.innerHTML = "";
 
-        data.forEach(t => {
-            const item = document.createElement("li");
+    data.forEach(t => {
+        const item = document.createElement("li");
 
         item.innerHTML = `
             <span>${t.monto}€ | ${t.fecha} | ${t.descripcion}</span>
             <button class="btn-eliminar" onclick="eliminarTransferencia(${t.id})">X</button>
         `;
 
-            lista.appendChild(item);
-        });
-    }
+        lista.appendChild(item);
+    });
+}
 
 async function agregarTransferencia() {
     const monto = document.getElementById("monto").value;
@@ -94,8 +96,8 @@ async function agregarTransferencia() {
     const descripcion = document.getElementById("descripcion").value;
 
     const mensaje = document.getElementById("mensaje");
+    mensaje.innerText = "";
 
-    // VALIDACIÓN FRONT
     if (!monto || !fecha) {
         mensaje.style.color = "red";
         mensaje.innerText = "Monto y fecha son obligatorios";
@@ -117,18 +119,18 @@ async function agregarTransferencia() {
 
         const data = await response.json();
 
-        // 👉 SI HAY ERROR DEL BACKEND
         if (!response.ok) {
             mensaje.style.color = "red";
             mensaje.innerText = data.error || "Error al agregar transferencia";
+            setTimeout(() => mensaje.innerText = "", 3000);
             return;
         }
 
-        // 👉 OK REAL
         mensaje.style.color = "green";
         mensaje.innerText = "Transferencia agregada correctamente";
 
-        // limpiar inputs
+        setTimeout(() => mensaje.innerText = "", 3000);
+
         document.getElementById("monto").value = "";
         document.getElementById("fecha").value = "";
         document.getElementById("descripcion").value = "";
@@ -139,29 +141,78 @@ async function agregarTransferencia() {
     } catch (error) {
         mensaje.style.color = "red";
         mensaje.innerText = "Error de conexión";
+        setTimeout(() => mensaje.innerText = "", 3000);
     }
 }
 
+async function eliminarTransferencia(id) {
+    const confirmar = confirm("¿Seguro que quieres eliminar esta transferencia?");
+    if (!confirmar) return;
 
-    async function eliminarTransferencia(id) {
-        const confirmar = confirm("¿Seguro que quieres eliminar esta transferencia?");
+    await fetch(`/transferencias/${id}`, {
+        method: "DELETE"
+    });
 
-        if (!confirmar) return;
+    const mensaje = document.getElementById("mensaje");
+    mensaje.style.color = "green";
+    mensaje.innerText = "Transferencia eliminada";
 
-        await fetch(`/transferencias/${id}`, {
-            method: "DELETE"
-        });
-
-        const mensaje = document.getElementById("mensaje");
-        mensaje.style.color = "green";
-        mensaje.innerText = "Transferencia eliminada";
-
-        cargarResumen();
-        cargarTransferencias();
-    }
+    setTimeout(() => mensaje.innerText = "", 3000);
 
     cargarResumen();
     cargarTransferencias();
+}
+
+async function guardarObjetivo() {
+    const objetivo = document.getElementById("nuevo-objetivo").value;
+    const mensaje = document.getElementById("mensaje");
+
+    mensaje.innerText = "";
+
+    if (!objetivo || objetivo <= 0) {
+        mensaje.style.color = "red";
+        mensaje.innerText = "Objetivo inválido";
+        setTimeout(() => mensaje.innerText = "", 3000);
+        return;
+    }
+
+    try {
+        const response = await fetch("/objetivo", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ objetivo: parseFloat(objetivo) })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            mensaje.style.color = "red";
+            mensaje.innerText = data.error || "Error al guardar objetivo";
+            setTimeout(() => mensaje.innerText = "", 3000);
+            return;
+        }
+
+        mensaje.style.color = "green";
+        mensaje.innerText = "Objetivo actualizado";
+
+        setTimeout(() => mensaje.innerText = "", 3000);
+
+        document.getElementById("nuevo-objetivo").value = "";
+
+        cargarResumen();
+
+    } catch (error) {
+        mensaje.style.color = "red";
+        mensaje.innerText = "Error de conexión";
+        setTimeout(() => mensaje.innerText = "", 3000);
+    }
+}
+
+cargarResumen();
+cargarTransferencias();
+
 </script>
 
 </body>
