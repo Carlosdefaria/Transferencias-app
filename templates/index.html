@@ -49,6 +49,19 @@
 <ul id="lista-transferencias"></ul>
 
 <script>
+
+function ponerFechaHoy() {
+    const hoy = new Date();
+
+    const year = hoy.getFullYear();
+    const month = String(hoy.getMonth() + 1).padStart(2, '0');
+    const day = String(hoy.getDate()).padStart(2, '0');
+
+    const fechaFormateada = `${year}-${month}-${day}`;
+
+    document.getElementById("fecha").value = fechaFormateada;
+}
+
 let mesSeleccionado = null;
 
 function aplicarFiltro() {
@@ -172,8 +185,11 @@ async function agregarTransferencia() {
         setTimeout(() => mensaje.innerText = "", 3000);
 
         document.getElementById("monto").value = "";
-        document.getElementById("fecha").value = "";
+        ponerFechaHoy();
         document.getElementById("descripcion").value = "";
+
+        mesSeleccionado = null;
+        document.getElementById("filtro-mes").value = "";
 
         cargarResumen();
         cargarTransferencias();
@@ -252,6 +268,7 @@ async function guardarObjetivo() {
 
 cargarResumen();
 cargarTransferencias();
+ponerFechaHoy();
 
 </script>
 
