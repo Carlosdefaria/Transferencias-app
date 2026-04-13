@@ -18,7 +18,7 @@
     <option value="Pito">Pito</option>
 </select>
 
-<h2>Filtrar por mes</h3>
+<h2>Filtrar por mes</h2>
 
 <input type="month" id="filtro-mes">
 <button onclick="aplicarFiltro()">Aplicar filtro</button>
@@ -56,6 +56,11 @@
 <ul id="lista-transferencias"></ul>
 
 <script>
+
+function getPersonaSeleccionada() {
+    return document.getElementById("persona").value;
+}
+
 let personaSeleccionada = "Carlos";
 
 function cambiarPersona() {
@@ -102,10 +107,11 @@ function limpiarFiltro() {
 
 
 async function cargarResumen() {
-    let url = "/resumen";
+    let persona = getPersonaSeleccionada();
+    let url = `/resumen?persona=${persona}`;
 
     if (mesSeleccionado) {
-        url += "?mes=" + mesSeleccionado;
+        url += `&mes=${mesSeleccionado}`;
     }
 
     const respuesta = await fetch(url);
@@ -137,7 +143,8 @@ async function cargarResumen() {
 }
 
 async function cargarTransferencias() {
-    const respuesta = await fetch("/transferencias");
+    const persona = getPersonaSeleccionada();
+    const respuesta = await fetch(`/transferencias?persona=${persona}`);
     const data = await respuesta.json();
 
     const lista = document.getElementById("lista-transferencias");
@@ -183,7 +190,7 @@ async function agregarTransferencia() {
                 monto: parseFloat(monto),
                 fecha: fecha,
                 descripcion: descripcion,
-                persona: personaSeleccionada
+                persona: getPersonaSeleccionada()
             })
         });
 

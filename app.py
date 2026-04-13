@@ -148,14 +148,14 @@ def crear_transferencia():
 
     descripcion = data.get("descripcion")
 
-    if not monto or not fecha:
+    if fecha is None:
         return jsonify({"error": "Faltan datos"}), 400
 
     conn = get_db_connection()
     cursor = conn.cursor()
 
     cursor.execute(
-        "INSERT INTO transferencias (monto, fecha, descripcion, persona) VALUES (%s, %s, %s)",
+        "INSERT INTO transferencias (monto, fecha, descripcion, persona) VALUES (%s, %s, %s, %s)",
         (monto, fecha, descripcion, persona)
     )
 
