@@ -42,7 +42,8 @@ def crear_tablas_postgres():
             id SERIAL PRIMARY KEY,
             monto FLOAT NOT NULL,
             fecha DATE NOT NULL,
-            descripcion TEXT
+            descripcion TEXT,
+            persona TEXT NOT NULL
         );
     """)
 
@@ -125,8 +126,13 @@ def crear_transferencia():
     monto = data.get("monto")
     fecha = data.get("fecha")
     descripcion = data.get("descripcion", "")
+    persona = data.get("persona")
 
     # Validaciones
+
+    if not persona:
+        return jsonify({"error": "Falta la persona"}), 400
+
     try:
         monto = float(monto)
     except:
@@ -149,8 +155,8 @@ def crear_transferencia():
     cursor = conn.cursor()
 
     cursor.execute(
-        "INSERT INTO transferencias (monto, fecha, descripcion) VALUES (%s, %s, %s)",
-        (monto, fecha, descripcion)
+        "INSERT INTO transferencias (monto, fecha, descripcion, persona) VALUES (%s, %s, %s)",
+        (monto, fecha, descripcion, persona)
     )
 
     conn.commit()
@@ -165,11 +171,18 @@ def obtener_transferencias():
     conn = get_db_connection()
     cursor = conn.cursor()
 
+    persona = request.args.get("persona")
+
+    if not persona:
+        return jsonify({"error": "Falta persona"}), 400
+
     cursor.execute("""
-    SELECT id, monto, fecha, descripcion 
-    FROM transferencias 
-    ORDER BY fecha DESC
-    """)
+        SELECT id, monto, fecha, descripcion, persona
+        FROM transferencias
+        WHERE persona = %s
+        ORDER BY fecha DESC
+    """, (persona,))
+
     filas = cursor.fetchall()
 
     cursor.close()
@@ -182,7 +195,8 @@ def obtener_transferencias():
             "id": fila[0],
             "monto": fila[1],
             "fecha": fila[2],
-            "descripcion": fila[3]
+            "descripcion": fila[3],
+            "persona": fila[4]
         })
 
     return jsonify(resultado)
@@ -208,26 +222,32 @@ def obtener_resumen():
     cursor = conn.cursor()
 
     mes = request.args.get("mes")
+    persona = request.args.get("persona")
 
-    #  si viene mes del frontend
+    # 👉 Validación básica
+    if not persona:
+        return jsonify({"error": "Falta persona"}), 400
+
+    # Mes dinámico
     if mes:
         mes_a_usar = mes
     else:
         hoy = datetime.now()
         mes_a_usar = hoy.strftime("%Y-%m")
 
-    # TOTAL DEL MES (dinámico)
+    # 👉 TOTAL FILTRADO POR PERSONA
     cursor.execute(
         """
         SELECT COALESCE(SUM(monto), 0)
         FROM transferencias
         WHERE TO_CHAR(fecha, 'YYYY-MM') = %s
+        AND persona = %s
         """,
-        (mes_a_usar,)
+        (mes_a_usar, persona)
     )
     total = cursor.fetchone()[0]
 
-    # OBJETIVO (no depende del mes por ahora)
+    # OBJETIVO (de momento global)
     cursor.execute("SELECT objetivo_total FROM config LIMIT 1")
     objetivo_row = cursor.fetchone()
 
