@@ -65,6 +65,8 @@ function aplicarFiltro() {
 function limpiarFiltro() {
     mesSeleccionado = null;
 
+    document.getElementById("filtro-mes").value = ""; // 🔥 FIX
+
     cargarResumen();
     cargarTransferencias();
 }
