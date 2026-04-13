@@ -36,6 +36,10 @@ def crear_tablas_postgres():
     conn = get_db_connection()
     cur = conn.cursor()
 
+    # 🔥 BORRAR TABLAS (solo temporal)
+    cur.execute("DROP TABLE IF EXISTS transferencias;")
+    cur.execute("DROP TABLE IF EXISTS config;")
+
     # Tabla transferencias
     cur.execute("""
         CREATE TABLE IF NOT EXISTS transferencias (
