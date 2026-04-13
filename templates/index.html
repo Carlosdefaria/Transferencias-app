@@ -11,6 +11,13 @@
 <h1>Control de Transferencias</h1>
 <p id="mensaje" style="color: green;"></p>
 
+<h3>Filtrar por mes</h3>
+
+<input type="month" id="filtro-mes">
+<button onclick="aplicarFiltro()">Aplicar filtro</button>
+<button onclick="limpiarFiltro()">Mes actual</button>
+
+
 <h2>Resumen</h2>
 
 <p>Total: <span id="total">0</span> €</p>
@@ -42,9 +49,35 @@
 <ul id="lista-transferencias"></ul>
 
 <script>
+let mesSeleccionado = null;
+
+function aplicarFiltro() {
+    const input = document.getElementById("filtro-mes").value;
+
+    if (!input) return;
+
+    mesSeleccionado = input; // formato: "2026-04"
+
+    cargarResumen();
+    cargarTransferencias();
+}
+
+function limpiarFiltro() {
+    mesSeleccionado = null;
+
+    cargarResumen();
+    cargarTransferencias();
+}
+
 
 async function cargarResumen() {
-    const respuesta = await fetch("/resumen");
+    let url = "/resumen";
+
+    if (mesSeleccionado) {
+        url += "?mes=" + mesSeleccionado;
+    }
+
+    const respuesta = await fetch(url);
     const data = await respuesta.json();
 
     document.getElementById("total").innerText = data.total;
@@ -80,19 +113,20 @@ async function cargarTransferencias() {
     lista.innerHTML = "";
 
     data.forEach(t => {
+        if (mesSeleccionado) {
+            if (!t.fecha.startsWith(mesSeleccionado)) return;
+        }
+
         const item = document.createElement("li");
 
-        const fecha = new Date(t.fecha);
-        const fechaFormateada = fecha.toLocaleDateString("es-ES");
-
         item.innerHTML = `
-            <span>${t.monto}€ | ${fechaFormateada} | ${t.descripcion}</span>
+            <span>${t.monto}€ | ${t.fecha} | ${t.descripcion}</span>
             <button class="btn-eliminar" onclick="eliminarTransferencia(${t.id})">X</button>
         `;
 
         lista.appendChild(item);
     });
-}
+} //
 
 async function agregarTransferencia() {
     const monto = document.getElementById("monto").value;
