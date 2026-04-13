@@ -182,7 +182,8 @@ async function agregarTransferencia() {
             body: JSON.stringify({
                 monto: parseFloat(monto),
                 fecha: fecha,
-                descripcion: descripcion
+                descripcion: descripcion,
+                persona: personaSeleccionada
             })
         });
 
