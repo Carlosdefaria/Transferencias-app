@@ -207,21 +207,27 @@ def obtener_resumen():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    hoy = datetime.now()
-    mes_actual = hoy.strftime("%Y-%m")
+    mes = request.args.get("mes")
 
-    # TOTAL DEL MES
+    #  si viene mes del frontend
+    if mes:
+        mes_a_usar = mes
+    else:
+        hoy = datetime.now()
+        mes_a_usar = hoy.strftime("%Y-%m")
+
+    # TOTAL DEL MES (dinámico)
     cursor.execute(
         """
         SELECT COALESCE(SUM(monto), 0)
         FROM transferencias
         WHERE TO_CHAR(fecha, 'YYYY-MM') = %s
         """,
-        (mes_actual,)
+        (mes_a_usar,)
     )
     total = cursor.fetchone()[0]
 
-    # OBJETIVO
+    # OBJETIVO (no depende del mes por ahora)
     cursor.execute("SELECT objetivo_total FROM config LIMIT 1")
     objetivo_row = cursor.fetchone()
 
