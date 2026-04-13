@@ -11,7 +11,14 @@
 <h1>Control de Transferencias</h1>
 <p id="mensaje" style="color: green;"></p>
 
-<h3>Filtrar por mes</h3>
+<h2>Cuenta</h2>
+
+<select id="persona" onchange="cambiarPersona()">
+    <option value="Carlos">Carlos</option>
+    <option value="Pito">Pito</option>
+</select>
+
+<h2>Filtrar por mes</h3>
 
 <input type="month" id="filtro-mes">
 <button onclick="aplicarFiltro()">Aplicar filtro</button>
@@ -49,6 +56,15 @@
 <ul id="lista-transferencias"></ul>
 
 <script>
+let personaSeleccionada = "Carlos";
+
+function cambiarPersona() {
+    const select = document.getElementById("persona");
+    personaSeleccionada = select.value;
+
+    cargarResumen();
+    cargarTransferencias();
+}
 
 function ponerFechaHoy() {
     const hoy = new Date();
