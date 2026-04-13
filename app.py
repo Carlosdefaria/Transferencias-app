@@ -165,7 +165,11 @@ def obtener_transferencias():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT id, monto, fecha, descripcion FROM transferencias")
+    cursor.execute("""
+    SELECT id, monto, fecha, descripcion 
+    FROM transferencias 
+    ORDER BY fecha DESC
+    """)
     filas = cursor.fetchall()
 
     cursor.close()
