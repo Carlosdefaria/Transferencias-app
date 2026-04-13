@@ -142,7 +142,7 @@ def crear_transferencia():
         return jsonify({"error": "El monto debe ser mayor a 0"}), 400
 
     try:
-        datetime.strptime(fecha, "%Y-%m-%d")
+        datetime.strptime(fecha, "%Y-%m-%d").date()
     except:
         return jsonify({"error": "Fecha inválida"}), 400
 
@@ -276,14 +276,16 @@ def guardar_objetivo():
 
         conn = get_db_connection()
 
-        with conn.cursor() as cursor:
-            cursor.execute("DELETE FROM config")
-            cursor.execute(
-                "INSERT INTO config (objetivo_total) VALUES (%s)",
-                (objetivo,)
-            )
+        cursor = conn.cursor()
+
+        cursor.execute("DELETE FROM config")
+        cursor.execute(
+            "INSERT INTO config (objetivo_total) VALUES (%s)",
+            (objetivo,)
+        )
 
         conn.commit()
+        cursor.close()
         conn.close()
 
         return jsonify({"mensaje": "Objetivo guardado"})
