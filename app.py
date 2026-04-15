@@ -261,8 +261,8 @@ def obtener_resumen():
 
     # OBJETIVO (de momento global)
     cursor.execute(
-        "SELECT objetivo_total FROM config WHERE persona = % LIMIT 1",
-        (persona)
+        "SELECT objetivo_total FROM config WHERE persona = %s LIMIT 1",
+        (persona,)
     )
     objetivo_row = cursor.fetchone()
 
