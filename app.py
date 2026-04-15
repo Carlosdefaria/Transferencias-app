@@ -38,6 +38,7 @@ def crear_tablas_postgres():
 
     # 🔥 SOLO PARA ESTA MIGRACIÓN (luego lo borras)
     cur.execute("DROP TABLE IF EXISTS config;")
+    cur.execute("DROP TABLE IF EXISTS transferencias;")
 
     # Tabla transferencias (no se toca)
     cur.execute("""
