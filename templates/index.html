@@ -8,6 +8,16 @@
 </head>
 <body>
 
+<!-- LOGIN -->
+<div id="login-container" class="login">
+    <h2>Acceso</h2>
+    <input type="password" id="pin" placeholder="Introduce PIN">
+    <button onclick="login()">Entrar</button>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none;">
+
 <div class="container">
 
     <h1>Control de Transferencias</h1>
@@ -17,7 +27,6 @@
     Estás viendo: <strong id="nombre-usuario">Carlos</strong>
     </p>
 
-    <!-- CUENTA -->
     <div class="card">
         <h2>Cuenta</h2>
         <select id="persona" onchange="cambiarPersona()">
@@ -26,7 +35,6 @@
         </select>
     </div>
 
-    <!-- FILTRO -->
     <div class="card">
         <h2>Filtrar por mes</h2>
         <input type="month" id="filtro-mes">
@@ -34,7 +42,6 @@
         <button class="secondary" onclick="limpiarFiltro()">Mes actual</button>
     </div>
 
-    <!-- RESUMEN -->
     <div class="card">
         <h2>Resumen</h2>
         <p>Total: <span id="total">0</span> €</p>
@@ -52,7 +59,6 @@
         <p id="texto-progreso"></p>
     </div>
 
-    <!-- AGREGAR -->
     <div class="card">
         <h2>Agregar transferencia</h2>
         <input type="number" id="monto" placeholder="Monto">
@@ -61,25 +67,33 @@
         <button onclick="agregarTransferencia()">Agregar</button>
     </div>
 
-    <!-- HISTORIAL -->
     <div class="card">
         <h2>Historial</h2>
         <ul id="lista-transferencias"></ul>
     </div>
 
 </div>
-</body>
-</html>
-
+</div>
 
 <script>
 
-    function formatearDinero(valor) {
+function login() {
+    const pin = document.getElementById("pin").value;
+
+    if (pin === "1234") {
+        document.getElementById("login-container").style.display = "none";
+        document.getElementById("app").style.display = "block";
+    } else {
+        alert("PIN incorrecto");
+    }
+}
+
+function formatearDinero(valor) {
     return new Intl.NumberFormat('es-ES', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
     }).format(valor || 0);
-    }
+}
 
 function getPersonaSeleccionada() {
     return document.getElementById("persona").value;
@@ -104,33 +118,26 @@ function ponerFechaHoy() {
     const month = String(hoy.getMonth() + 1).padStart(2, '0');
     const day = String(hoy.getDate()).padStart(2, '0');
 
-    const fechaFormateada = `${year}-${month}-${day}`;
-
-    document.getElementById("fecha").value = fechaFormateada;
+    document.getElementById("fecha").value = `${year}-${month}-${day}`;
 }
 
 let mesSeleccionado = null;
 
 function aplicarFiltro() {
     const input = document.getElementById("filtro-mes").value;
-
     if (!input) return;
 
-    mesSeleccionado = input; // formato: "2026-04"
-
+    mesSeleccionado = input;
     cargarResumen();
     cargarTransferencias();
 }
 
 function limpiarFiltro() {
     mesSeleccionado = null;
-
-    document.getElementById("filtro-mes").value = ""; // 🔥 FIX
-
+    document.getElementById("filtro-mes").value = "";
     cargarResumen();
     cargarTransferencias();
 }
-
 
 async function cargarResumen() {
     let persona = getPersonaSeleccionada();
@@ -146,6 +153,10 @@ async function cargarResumen() {
     document.getElementById("total").innerText = formatearDinero(data.total);
     document.getElementById("objetivo").innerText = formatearDinero(data.objetivo);
     document.getElementById("restante").innerText = formatearDinero(data.restante);
+
+    // 🔥 color restante
+    const restanteElem = document.getElementById("restante");
+    restanteElem.style.color = data.restante <= 0 ? "green" : "red";
 
     let porcentaje = data.objetivo > 0 
         ? (data.total / data.objetivo) * 100 
@@ -164,7 +175,7 @@ async function cargarResumen() {
         barra.style.backgroundColor = "green";
     }
 
-    document.getElementById("texto-progreso").innerText = 
+    document.getElementById("texto-progreso").innerText =
         `${formatearDinero(data.total)}€ / ${formatearDinero(data.objetivo)}€`;
 }
 
@@ -177,20 +188,23 @@ async function cargarTransferencias() {
     lista.innerHTML = "";
 
     data.forEach(t => {
-        if (mesSeleccionado) {
-            if (!t.fecha.startsWith(mesSeleccionado)) return;
-        }
+        if (mesSeleccionado && !t.fecha.startsWith(mesSeleccionado)) return;
 
         const item = document.createElement("li");
 
+        const fecha = new Date(t.fecha).toLocaleDateString("es-ES");
+
         item.innerHTML = `
-            <span>${t.monto}€ | ${t.fecha} | ${t.descripcion}</span>
+            <span>
+                <strong>${formatearDinero(t.monto)}€</strong> — ${fecha}<br>
+                <small>${t.descripcion || "Sin descripción"}</small>
+            </span>
             <button class="btn-eliminar" onclick="eliminarTransferencia(${t.id})">X</button>
         `;
 
         lista.appendChild(item);
     });
-} //
+}
 
 async function agregarTransferencia() {
     const monto = document.getElementById("monto").value;
@@ -201,7 +215,7 @@ async function agregarTransferencia() {
     mensaje.innerText = "";
 
     if (!monto || !fecha) {
-        mmensaje.className = "mensaje exito";
+        mensaje.className = "mensaje error";
         mensaje.innerText = "Monto y fecha son obligatorios";
         return;
     }
@@ -209,13 +223,11 @@ async function agregarTransferencia() {
     try {
         const response = await fetch("/transferencias", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
+            headers: {"Content-Type": "application/json"},
             body: JSON.stringify({
                 monto: parseFloat(monto),
-                fecha: fecha,
-                descripcion: descripcion,
+                fecha,
+                descripcion,
                 persona: getPersonaSeleccionada()
             })
         });
@@ -223,20 +235,19 @@ async function agregarTransferencia() {
         const data = await response.json();
 
         if (!response.ok) {
-            mensaje.style.color = "red";
-            mensaje.innerText = data.error || "Error al agregar transferencia";
-            setTimeout(() => mensaje.innerText = "", 3000);
+            mensaje.className = "mensaje error";
+            mensaje.innerText = data.error || "Error";
             return;
         }
 
-        mensaje.style.color = "green";
+        mensaje.className = "mensaje exito";
         mensaje.innerText = "Transferencia agregada correctamente";
-
-        setTimeout(() => mensaje.innerText = "", 3000);
 
         document.getElementById("monto").value = "";
         ponerFechaHoy();
         document.getElementById("descripcion").value = "";
+
+        document.getElementById("monto").focus();
 
         mesSeleccionado = null;
         document.getElementById("filtro-mes").value = "";
@@ -245,27 +256,15 @@ async function agregarTransferencia() {
         cargarTransferencias();
 
     } catch (error) {
-        mensaje.style.color = "red";
+        mensaje.className = "mensaje error";
         mensaje.innerText = "Error de conexión";
-        setTimeout(() => mensaje.innerText = "", 3000);
     }
 }
 
-    document.getElementById("monto").focus();
-
 async function eliminarTransferencia(id) {
-    const confirmar = confirm("¿Eliminar esta transferencia?");
-    if (!confirmar) return;
+    if (!confirm("¿Eliminar esta transferencia?")) return;
 
-    await fetch(`/transferencias/${id}`, {
-        method: "DELETE"
-    });
-
-    const mensaje = document.getElementById("mensaje");
-    mensaje.style.color = "green";
-    mensaje.innerText = "Transferencia eliminada";
-
-    setTimeout(() => mensaje.innerText = "", 3000);
+    await fetch(`/transferencias/${id}`, { method: "DELETE" });
 
     cargarResumen();
     cargarTransferencias();
@@ -275,49 +274,38 @@ async function guardarObjetivo() {
     const objetivo = document.getElementById("nuevo-objetivo").value;
     const mensaje = document.getElementById("mensaje");
 
-    mensaje.innerText = "";
-
     if (!objetivo || objetivo <= 0) {
-        mensaje.style.color = "red";
+        mensaje.className = "mensaje error";
         mensaje.innerText = "Objetivo inválido";
-        setTimeout(() => mensaje.innerText = "", 3000);
         return;
     }
 
     try {
         const response = await fetch("/objetivo", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ 
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
                 objetivo: parseFloat(objetivo),
                 persona: getPersonaSeleccionada()
             })
         });
 
-        const data = await response.json();
-
         if (!response.ok) {
-            mensaje.style.color = "red";
-            mensaje.innerText = data.error || "Error al guardar objetivo";
-            setTimeout(() => mensaje.innerText = "", 3000);
+            mensaje.className = "mensaje error";
+            mensaje.innerText = "Error al guardar objetivo";
             return;
         }
 
-        mensaje.style.color = "green";
+        mensaje.className = "mensaje exito";
         mensaje.innerText = "Objetivo actualizado";
-
-        setTimeout(() => mensaje.innerText = "", 3000);
 
         document.getElementById("nuevo-objetivo").value = "";
 
         cargarResumen();
 
-    } catch (error) {
-        mensaje.style.color = "red";
+    } catch {
+        mensaje.className = "mensaje error";
         mensaje.innerText = "Error de conexión";
-        setTimeout(() => mensaje.innerText = "", 3000);
     }
 }
 
