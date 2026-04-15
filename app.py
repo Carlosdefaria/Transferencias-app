@@ -36,10 +36,6 @@ def crear_tablas_postgres():
     conn = get_db_connection()
     cur = conn.cursor()
 
-    # 🔥 SOLO PARA ESTA MIGRACIÓN (luego lo borras)
-    cur.execute("DROP TABLE IF EXISTS config;")
-    cur.execute("DROP TABLE IF EXISTS transferencias;")
-
     # Tabla transferencias (no se toca)
     cur.execute("""
         CREATE TABLE IF NOT EXISTS transferencias (
