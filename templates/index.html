@@ -13,6 +13,10 @@
     <h1>Control de Transferencias</h1>
     <p id="mensaje"></p>
 
+    <p class="usuario-activo">
+    Estás viendo: <strong id="nombre-usuario">Carlos</strong>
+    </p>
+
     <!-- CUENTA -->
     <div class="card">
         <h2>Cuenta</h2>
@@ -70,6 +74,13 @@
 
 <script>
 
+    function formatearDinero(valor) {
+    return new Intl.NumberFormat('es-ES', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }).format(valor || 0);
+    }
+
 function getPersonaSeleccionada() {
     return document.getElementById("persona").value;
 }
@@ -79,6 +90,8 @@ let personaSeleccionada = "Carlos";
 function cambiarPersona() {
     const select = document.getElementById("persona");
     personaSeleccionada = select.value;
+
+    document.getElementById("nombre-usuario").innerText = personaSeleccionada;
 
     cargarResumen();
     cargarTransferencias();
@@ -130,9 +143,9 @@ async function cargarResumen() {
     const respuesta = await fetch(url);
     const data = await respuesta.json();
 
-    document.getElementById("total").innerText = data.total;
-    document.getElementById("objetivo").innerText = data.objetivo;
-    document.getElementById("restante").innerText = data.restante;
+    document.getElementById("total").innerText = formatearDinero(data.total);
+    document.getElementById("objetivo").innerText = formatearDinero(data.objetivo);
+    document.getElementById("restante").innerText = formatearDinero(data.restante);
 
     let porcentaje = data.objetivo > 0 
         ? (data.total / data.objetivo) * 100 
@@ -152,7 +165,7 @@ async function cargarResumen() {
     }
 
     document.getElementById("texto-progreso").innerText = 
-        `${data.total}€ / ${data.objetivo}€`;
+        `${formatearDinero(data.total)}€ / ${formatearDinero(data.objetivo)}€`;
 }
 
 async function cargarTransferencias() {
@@ -188,7 +201,7 @@ async function agregarTransferencia() {
     mensaje.innerText = "";
 
     if (!monto || !fecha) {
-        mensaje.style.color = "red";
+        mmensaje.className = "mensaje exito";
         mensaje.innerText = "Monto y fecha son obligatorios";
         return;
     }
@@ -237,6 +250,8 @@ async function agregarTransferencia() {
         setTimeout(() => mensaje.innerText = "", 3000);
     }
 }
+
+    document.getElementById("monto").focus();
 
 async function eliminarTransferencia(id) {
     const confirmar = confirm("¿Eliminar esta transferencia?");

@@ -123,3 +123,37 @@ li span {
     width: 0%;
     transition: width 0.4s ease;
 }
+
+.mensaje {
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.mensaje.exito {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.mensaje.error {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+
+.usuario-activo {
+    text-align: center;
+    color: #555;
+    margin-bottom: 20px;
+}
+
+
+.card {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+}
