@@ -8,52 +8,65 @@
 </head>
 <body>
 
-<h1>Control de Transferencias</h1>
-<p id="mensaje" style="color: green;"></p>
+<div class="container">
 
-<h2>Cuenta</h2>
+    <h1>Control de Transferencias</h1>
+    <p id="mensaje"></p>
 
-<select id="persona" onchange="cambiarPersona()">
-    <option value="Carlos">Carlos</option>
-    <option value="Pito">Pito</option>
-</select>
+    <!-- CUENTA -->
+    <div class="card">
+        <h2>Cuenta</h2>
+        <select id="persona" onchange="cambiarPersona()">
+            <option value="Carlos">Carlos</option>
+            <option value="Pito">Pito</option>
+        </select>
+    </div>
 
-<h2>Filtrar por mes</h2>
+    <!-- FILTRO -->
+    <div class="card">
+        <h2>Filtrar por mes</h2>
+        <input type="month" id="filtro-mes">
+        <button onclick="aplicarFiltro()">Aplicar filtro</button>
+        <button class="secondary" onclick="limpiarFiltro()">Mes actual</button>
+    </div>
 
-<input type="month" id="filtro-mes">
-<button onclick="aplicarFiltro()">Aplicar filtro</button>
-<button onclick="limpiarFiltro()">Mes actual</button>
+    <!-- RESUMEN -->
+    <div class="card">
+        <h2>Resumen</h2>
+        <p>Total: <span id="total">0</span> €</p>
+        <p>Objetivo: <span id="objetivo">0</span> €</p>
+        <p>Restante: <span id="restante">0</span> €</p>
 
+        <h3>Actualizar objetivo</h3>
+        <input type="number" id="nuevo-objetivo" placeholder="Nuevo objetivo">
+        <button onclick="guardarObjetivo()">Guardar objetivo</button>
 
-<h2>Resumen</h2>
+        <h3>Progreso</h3>
+        <div id="barra-container">
+            <div id="barra-progreso"></div>
+        </div>
+        <p id="texto-progreso"></p>
+    </div>
 
-<p>Total: <span id="total">0</span> €</p>
-<p>Objetivo: <span id="objetivo">0</span> €</p>
-<p>Restante: <span id="restante">0</span> €</p>
+    <!-- AGREGAR -->
+    <div class="card">
+        <h2>Agregar transferencia</h2>
+        <input type="number" id="monto" placeholder="Monto">
+        <input type="date" id="fecha">
+        <input type="text" id="descripcion" placeholder="Descripción">
+        <button onclick="agregarTransferencia()">Agregar</button>
+    </div>
 
-<h3>Actualizar objetivo</h3>
+    <!-- HISTORIAL -->
+    <div class="card">
+        <h2>Historial</h2>
+        <ul id="lista-transferencias"></ul>
+    </div>
 
-<input type="number" id="nuevo-objetivo" placeholder="Nuevo objetivo">
-<button onclick="guardarObjetivo()">Guardar objetivo</button>
-
-<h3>Progreso</h3>
-
-<div id="barra-container">
-    <div id="barra-progreso"></div>
 </div>
+</body>
+</html>
 
-<p id="texto-progreso"></p>
-
-<h2>Agregar transferencia</h2>
-
-<input type="number" id="monto" placeholder="Monto"><br><br>
-<input type="date" id="fecha"><br><br>
-<input type="text" id="descripcion" placeholder="Descripción"><br><br>
-
-<button onclick="agregarTransferencia()">Agregar</button>
-
-<h2>Historial</h2>
-<ul id="lista-transferencias"></ul>
 
 <script>
 
