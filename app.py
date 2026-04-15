@@ -36,9 +36,10 @@ def crear_tablas_postgres():
     conn = get_db_connection()
     cur = conn.cursor()
 
-    # 🔥 BORRAR TABLAS (solo temporal)
+    # 🔥 SOLO PARA ESTA MIGRACIÓN (luego lo borras)
+    cur.execute("DROP TABLE IF EXISTS config;")
 
-    # Tabla transferencias
+    # Tabla transferencias (no se toca)
     cur.execute("""
         CREATE TABLE IF NOT EXISTS transferencias (
             id SERIAL PRIMARY KEY,
@@ -49,20 +50,28 @@ def crear_tablas_postgres():
         );
     """)
 
-    # Tabla config
+    # ✅ NUEVA TABLA CONFIG (POR PERSONA)
     cur.execute("""
         CREATE TABLE IF NOT EXISTS config (
             id SERIAL PRIMARY KEY,
+            persona TEXT NOT NULL,
             objetivo_total FLOAT
         );
     """)
 
-    # Insert inicial si no existe
+    # Insert inicial (2 usuarios)
     cur.execute("SELECT COUNT(*) FROM config")
     count = cur.fetchone()[0]
 
     if count == 0:
-        cur.execute("INSERT INTO config (objetivo_total) VALUES (1070)")
+        cur.execute(
+            "INSERT INTO config (persona, objetivo_total) VALUES (%s, %s)",
+            ("Carlos", 1070)
+        )
+        cur.execute(
+            "INSERT INTO config (persona, objetivo_total) VALUES (%s, %s)",
+            ("Pito", 1070)
+        )
 
     conn.commit()
     cur.close()
@@ -250,7 +259,10 @@ def obtener_resumen():
     total = cursor.fetchone()[0]
 
     # OBJETIVO (de momento global)
-    cursor.execute("SELECT objetivo_total FROM config LIMIT 1")
+    cursor.execute(
+        "SELECT objetivo_total FROM config WHERE persona = % LIMIT 1",
+        (persona)
+    )
     objetivo_row = cursor.fetchone()
 
     objetivo = objetivo_row[0] if objetivo_row else 0
@@ -272,18 +284,20 @@ def guardar_objetivo():
     try:
         data = request.get_json()
         objetivo = data.get("objetivo")
+        persona = data.get("persona")
 
         if not objetivo or objetivo <= 0:
             return jsonify({"error": "Objetivo inválido"}), 400
 
-        conn = get_db_connection()
+        if not persona:
+            return jsonify({"error": "Falta persona"}), 400
 
+        conn = get_db_connection()
         cursor = conn.cursor()
 
-        cursor.execute("DELETE FROM config")
         cursor.execute(
-            "INSERT INTO config (objetivo_total) VALUES (%s)",
-            (objetivo,)
+            "UPDATE config SET objetivo_total = %s WHERE persona = %s",
+            (objetivo, persona)
         )
 
         conn.commit()

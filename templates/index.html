@@ -262,7 +262,10 @@ async function guardarObjetivo() {
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ objetivo: parseFloat(objetivo) })
+            body: JSON.stringify({ 
+                objetivo: parseFloat(objetivo),
+                persona: getPersonaSeleccionada()
+            })
         });
 
         const data = await response.json();
