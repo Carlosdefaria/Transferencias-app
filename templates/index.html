@@ -205,7 +205,7 @@ async function cargarTransferencias() {
 
             <div style="display:flex; gap:5px;">
                 <button onclick="toggleConfirmar(${t.id})">
-                    ${t.confirmada ? "✔" : "Confirmar"}
+                    ${t.confirmada ? "Desconfirmar" : "Confirmar"}
                 </button>
 
                 <button class="btn-eliminar" onclick="eliminarTransferencia(${t.id})">X</button>
