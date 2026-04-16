@@ -228,6 +228,41 @@ def eliminar_transferencia(id):
     return jsonify({"mensaje": "Transferencia eliminada"})
 
 
+@app.route("/transferencias/<int:id>/confirmar", methods=["PATCH"])
+def confirmar_transferencia(id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Obtener estado actual
+    cursor.execute(
+        "SELECT confirmada FROM transferencias WHERE id = %s",
+        (id,)
+    )
+    resultado = cursor.fetchone()
+
+    if not resultado:
+        return jsonify({"error": "Transferencia no encontrada"}), 404
+
+    estado_actual = resultado[0]
+
+    # Toggle (cambiar true/false)
+    nuevo_estado = not estado_actual
+
+    cursor.execute(
+        "UPDATE transferencias SET confirmada = %s WHERE id = %s",
+        (nuevo_estado, id)
+    )
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return jsonify({
+        "mensaje": "Estado actualizado",
+        "confirmada": nuevo_estado
+    })
+
+
 @app.route("/resumen", methods=["GET"])
 def obtener_resumen():
     conn = get_db_connection()
