@@ -36,8 +36,6 @@ def crear_tablas_postgres():
     conn = get_db_connection()
     cur = conn.cursor()
 
-    cur.execute("DROP TABLE IF EXISTS transferencias;")
-
     # Tabla transferencias
     cur.execute("""
         CREATE TABLE IF NOT EXISTS transferencias (
@@ -188,7 +186,7 @@ def obtener_transferencias():
         return jsonify({"error": "Falta persona"}), 400
 
     cursor.execute("""
-        SELECT id, monto, fecha, descripcion, persona, cofirmada
+        SELECT id, monto, fecha, descripcion, persona, confirmada
         FROM transferencias
         WHERE persona = %s
         ORDER BY fecha DESC
