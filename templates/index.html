@@ -96,6 +96,19 @@ function login() {
     }
 }
 
+// 🔥 NUEVA FUNCIÓN 
+function mostrarMensaje(texto, tipo = "exito") {
+    const mensaje = document.getElementById("mensaje");
+
+    mensaje.className = `mensaje ${tipo}`;
+    mensaje.innerText = texto;
+
+    setTimeout(() => {
+        mensaje.innerText = "";
+        mensaje.className = "";
+    }, 4000);
+}
+
 function formatearDinero(valor) {
     return new Intl.NumberFormat('es-ES', {
         minimumFractionDigits: 2,
@@ -163,7 +176,6 @@ async function cargarResumen() {
     document.getElementById("restante").innerText = formatearDinero(data.restante);
     document.getElementById("pendiente").innerText = formatearDinero(data.pendiente);
 
-    // 🔥 color restante
     const restanteElem = document.getElementById("restante");
     restanteElem.style.color = data.restante <= 0 ? "green" : "red";
     document.getElementById("pendiente").style.color = "orange";
@@ -201,7 +213,6 @@ async function cargarTransferencias() {
         if (mesSeleccionado && !t.fecha.startsWith(mesSeleccionado)) return;
 
         const item = document.createElement("li");
-
         const fecha = new Date(t.fecha).toLocaleDateString("es-ES");
 
         item.innerHTML = `
@@ -215,13 +226,12 @@ async function cargarTransferencias() {
                     ${t.confirmada ? "Desconfirmar" : "Confirmar"}
                 </button>
 
-                    ${!t.confirmada ? `
-                        <button class="btn-eliminar" onclick="eliminarTransferencia(${t.id})">X</button>
-                    ` : ""}
+                ${!t.confirmada ? `
+                    <button class="btn-eliminar" onclick="eliminarTransferencia(${t.id})">X</button>
+                ` : ""}
             </div>
         `;
 
-        // 🔥 COLOR VERDE SI ESTÁ CONFIRMADA
         if (t.confirmada) {
             item.style.backgroundColor = "#d4edda";
         }
@@ -230,24 +240,13 @@ async function cargarTransferencias() {
     });
 }
 
-
 async function agregarTransferencia() {
     const monto = document.getElementById("monto").value;
     const fecha = document.getElementById("fecha").value;
     const descripcion = document.getElementById("descripcion").value;
 
-    const mensaje = document.getElementById("mensaje");
-    mensaje.innerText = "";
-
     if (!monto || !fecha) {
-        mensaje.className = "mensaje error";
-        mensaje.innerText = "Monto y fecha son obligatorios";
-
-        setTimeout(() => {
-            mensaje.innerText = "";
-            mensaje.className = "";
-        }, 4000);
-           
+        mostrarMensaje("Monto y fecha son obligatorios", "error");
         return;
     }
 
@@ -266,23 +265,15 @@ async function agregarTransferencia() {
         const data = await response.json();
 
         if (!response.ok) {
-            mensaje.className = "mensaje error";
-            mensaje.innerText = data.error || "Error";
+            mostrarMensaje(data.error || "Error", "error");
             return;
         }
 
-        mensaje.className = "mensaje exito";
-        mensaje.innerText = "Transferencia agregada correctamente";
-
-        setTimeout(() => {
-            mensaje.innerText = "";
-            mensaje.className = "";
-        }, 4000);
+        mostrarMensaje("Transferencia agregada correctamente");
 
         document.getElementById("monto").value = "";
         ponerFechaHoy();
         document.getElementById("descripcion").value = "";
-
         document.getElementById("monto").focus();
 
         mesSeleccionado = null;
@@ -291,17 +282,10 @@ async function agregarTransferencia() {
         cargarResumen();
         cargarTransferencias();
 
-    } catch (error) {
-        mensaje.className = "mensaje error";
-        mensaje.innerText = "Error de conexión";
-
-        setTimeout(() => {
-            mensaje.innerText = "";
-            mensaje.className = "";
-        }, 4000);
+    } catch {
+        mostrarMensaje("Error de conexión", "error");
     }
 }
-
 
 async function eliminarTransferencia(id) {
     if (!confirm("¿Eliminar esta transferencia?")) return;
@@ -321,19 +305,11 @@ async function toggleConfirmar(id) {
     cargarResumen();
 }
 
-
 async function guardarObjetivo() {
     const objetivo = document.getElementById("nuevo-objetivo").value;
-    const mensaje = document.getElementById("mensaje");
 
     if (!objetivo || objetivo <= 0) {
-        mensaje.className = "mensaje error";
-        mensaje.innerText = "Objetivo inválido";
-        
-        setTimeout(() => {
-            mensaje.innerText = "";
-            mensaje.className = "";
-        }, 4000);
+        mostrarMensaje("Objetivo inválido", "error");
         return;
     }
 
@@ -348,21 +324,17 @@ async function guardarObjetivo() {
         });
 
         if (!response.ok) {
-            mensaje.className = "mensaje error";
-            mensaje.innerText = "Error al guardar objetivo";
+            mostrarMensaje("Error al guardar objetivo", "error");
             return;
         }
 
-        mensaje.className = "mensaje exito";
-        mensaje.innerText = "Objetivo actualizado";
+        mostrarMensaje("Objetivo actualizado");
 
         document.getElementById("nuevo-objetivo").value = "";
-
         cargarResumen();
 
     } catch {
-        mensaje.className = "mensaje error";
-        mensaje.innerText = "Error de conexión";
+        mostrarMensaje("Error de conexión", "error");
     }
 }
 
