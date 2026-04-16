@@ -208,7 +208,9 @@ async function cargarTransferencias() {
                     ${t.confirmada ? "Desconfirmar" : "Confirmar"}
                 </button>
 
-                <button class="btn-eliminar" onclick="eliminarTransferencia(${t.id})">X</button>
+                    ${!t.confirmada ? `
+                        <button class="btn-eliminar" onclick="eliminarTransferencia(${t.id})">X</button>
+                    ` : ""}
             </div>
         `;
 
