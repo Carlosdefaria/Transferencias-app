@@ -47,19 +47,26 @@
         <p>Total confirmado: <span id="confirmado">0</span> €</p>
         <p>Objetivo a alcanzar: <span id="objetivo">0</span> €</p>
         <p>Restante para llegar al objetivo: <span id="restante">0</span> €</p>
-        <p>Transferencias hechas aun no recibidas: <span id="pendiente">0</span> €</p>
-
-        <h3>Actualizar objetivo</h3>
-        <input type="number" id="nuevo-objetivo" placeholder="Nuevo objetivo">
-        <button onclick="guardarObjetivo()">Guardar objetivo</button>
-
+        <p>Transferencias hechas aún no recibidas: <span id="pendiente">0</span> €</p>
+    
         <h3>Progreso</h3>
         <div id="barra-container">
             <div id="barra-progreso"></div>
         </div>
         <p id="texto-progreso"></p>
     </div>
+    
 
+
+    <div class="card">
+        <h2>Actualizar objetivo</h2>
+
+        <input type="number" id="nuevo-objetivo" placeholder="Nuevo objetivo">
+        <button onclick="guardarObjetivo()">Guardar objetivo</button>
+    </div>
+
+
+    
     <div class="card">
         <h2>Agregar transferencia</h2>
         <input type="number" id="monto" placeholder="Monto">
