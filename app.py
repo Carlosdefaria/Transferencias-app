@@ -269,45 +269,51 @@ def obtener_resumen():
     mes = request.args.get("mes")
     persona = request.args.get("persona")
 
-    # 👉 Validación básica
     if not persona:
         return jsonify({"error": "Falta persona"}), 400
 
-    # Mes dinámico
     if mes:
         mes_a_usar = mes
     else:
         hoy = datetime.now()
         mes_a_usar = hoy.strftime("%Y-%m")
 
-    # 👉 TOTAL FILTRADO POR PERSONA
-    cursor.execute(
-        """
+    # ✅ CONFIRMADO
+    cursor.execute("""
         SELECT COALESCE(SUM(monto), 0)
         FROM transferencias
         WHERE TO_CHAR(fecha, 'YYYY-MM') = %s
         AND persona = %s
-        """,
-        (mes_a_usar, persona)
-    )
-    total = cursor.fetchone()[0]
+        AND confirmada = TRUE
+    """, (mes_a_usar, persona))
+    total_confirmado = cursor.fetchone()[0]
 
-    # OBJETIVO (de momento global)
+    # ✅ PENDIENTE
+    cursor.execute("""
+        SELECT COALESCE(SUM(monto), 0)
+        FROM transferencias
+        WHERE TO_CHAR(fecha, 'YYYY-MM') = %s
+        AND persona = %s
+        AND confirmada = FALSE
+    """, (mes_a_usar, persona))
+    pendiente = cursor.fetchone()[0]
+
+    # OBJETIVO
     cursor.execute(
         "SELECT objetivo_total FROM config WHERE persona = %s LIMIT 1",
         (persona,)
     )
     objetivo_row = cursor.fetchone()
-
     objetivo = objetivo_row[0] if objetivo_row else 0
 
-    restante = objetivo - total
+    restante = objetivo - total_confirmado
 
     cursor.close()
     conn.close()
 
     return jsonify({
-        "total": total,
+        "total_confirmado": total_confirmado,
+        "pendiente": pendiente,
         "objetivo": objetivo,
         "restante": restante
     })
