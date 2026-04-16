@@ -199,8 +199,20 @@ async function cargarTransferencias() {
                 <strong>${formatearDinero(t.monto)}€</strong> — ${fecha}<br>
                 <small>${t.descripcion || "Sin descripción"}</small>
             </span>
-            <button class="btn-eliminar" onclick="eliminarTransferencia(${t.id})">X</button>
+
+            <div style="display:flex; gap:5px;">
+                <button onclick="toggleConfirmar(${t.id})">
+                    ${t.confirmada ? "✔" : "Confirmar"}
+                </button>
+
+                <button class="btn-eliminar" onclick="eliminarTransferencia(${t.id})">X</button>
+            </div>
         `;
+
+        // 🔥 COLOR VERDE SI ESTÁ CONFIRMADA
+        if (t.confirmada) {
+            item.style.backgroundColor = "#d4edda";
+        }
 
         lista.appendChild(item);
     });
@@ -269,6 +281,16 @@ async function eliminarTransferencia(id) {
     cargarResumen();
     cargarTransferencias();
 }
+
+async function toggleConfirmar(id) {
+    await fetch(`/transferencias/${id}/confirmar`, {
+        method: "PATCH"
+    });
+
+    cargarTransferencias();
+    cargarResumen();
+}
+
 
 async function guardarObjetivo() {
     const objetivo = document.getElementById("nuevo-objetivo").value;
