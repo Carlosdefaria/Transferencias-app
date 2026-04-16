@@ -85,10 +85,16 @@
 
 <script>
 
-function login() {
+async function login() {
     const pin = document.getElementById("pin").value;
 
-    if (pin === "1234") {
+    const response = await fetch("/login", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ pin })
+    });
+
+    if (response.ok) {
         document.getElementById("login-container").style.display = "none";
         document.getElementById("app").style.display = "block";
     } else {

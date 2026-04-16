@@ -128,6 +128,19 @@ def home():
 # 👉 CREAR TRANSFERENCIA
 
 
+@app.route("/login", methods=["POST"])
+def login():
+    data = request.get_json()
+    pin = data.get("pin")
+
+    PIN_CORRECTO = "1234"  # luego esto lo puedes mover a variable de entorno
+
+    if pin == PIN_CORRECTO:
+        return jsonify({"ok": True})
+    else:
+        return jsonify({"ok": False}), 401
+
+
 @app.route("/transferencias", methods=["POST"])
 def crear_transferencia():
     data = request.get_json()
