@@ -1,5 +1,19 @@
+# Entorno virtual
 venv/
+
+# Python
 __pycache__/
 *.pyc
-database.db
+
+# Base de datos local
+*.db
+
+# Variables sensibles
 .env
+
+# Backups
+backups_transferencias/
+
+# Sistema
+.DS_Store
+Thumbs.db
