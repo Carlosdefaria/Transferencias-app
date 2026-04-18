@@ -362,3 +362,7 @@ def guardar_objetivo():
     except Exception as e:
         print("ERROR OBJETIVO:", e)
         return jsonify({"error": "Error interno"}), 500
+
+
+if __name__ == "__main__":
+    app.run(debug=True)

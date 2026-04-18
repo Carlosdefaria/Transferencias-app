@@ -40,9 +40,9 @@
 
     <input type="number" id="cantidad" placeholder="Cantidad a convertir" step="any">
 
-    <div style="display:flex; align-items:center; gap:10px; margin-top:10px;">
-        <div style="flex:1;">
-            <label>De:</label>
+    <div class="conversor-row">
+        <div class="campo">
+            <label>De</label>
             <select id="de">
                 <option value="EUR">EUR</option>
                 <option value="USD">USD</option>
@@ -50,10 +50,10 @@
             </select>
         </div>
 
-        <button onclick="invertirMonedas()" style="margin-top:20px;">🔄</button>
+        <button class="swap-btn" onclick="invertirMonedas()">⇄</button>
 
-        <div style="flex:1;">
-            <label>A:</label>
+        <div class="campo">
+            <label>A</label>
             <select id="a">
                 <option value="USD">USD</option>
                 <option value="EUR">EUR</option>
@@ -62,10 +62,12 @@
         </div>
     </div>
 
-    <button onclick="convertirMoneda()" style="margin-top:15px;">Convertir</button>
+    <button onclick="convertirMoneda()" style="margin-top:15px;">
+        Convertir
+    </button>
 
     <p id="resultado-conversion"></p>
-    <small id="tasa-info" style="color:gray;"></small>
+    <small id="tasa-info"></small>
 </div>
 
     <div class="card">

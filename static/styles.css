@@ -1,34 +1,40 @@
 body {
     font-family: Arial, sans-serif;
-    background-color: #f5f6fa;
+    background-color: #f5f7fa;
     margin: 0;
     padding: 0;
 }
 
+/* Contenedor principal */
 .container {
     max-width: 700px;
     margin: 40px auto;
-    background: white;
-    padding: 25px;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    padding: 20px;
 }
 
+/* Títulos */
 h1 {
     text-align: center;
-    margin-bottom: 10px;
+    margin-bottom: 20px;
 }
 
 h2 {
     margin-bottom: 10px;
 }
 
+/* Cards (mejoradas) */
 .card {
-    margin-bottom: 25px;
-    padding: 15px;
-    border-radius: 10px;
-    background-color: #fafafa;
-    border: 1px solid #eee;
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    margin-bottom: 20px;
+    transition: 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
 }
 
 /* Inputs */
@@ -38,27 +44,28 @@ select {
     padding: 10px;
     margin-top: 8px;
     margin-bottom: 12px;
-    border-radius: 6px;
+    border-radius: 8px;
     border: 1px solid #ccc;
     font-size: 14px;
     box-sizing: border-box;
 }
 
-/* Botones */
+/* Botones (mejorados) */
 button {
     width: 100%;
-    padding: 10px;
-    background-color: #2f80ed;
+    padding: 12px;
+    background: #3b82f6;
     color: white;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     font-weight: bold;
     cursor: pointer;
-    margin-bottom: 8px;
+    transition: 0.2s;
+    margin-top: 5px;
 }
 
 button:hover {
-    background-color: #1366d6;
+    background: #2563eb;
 }
 
 button.secondary {
@@ -83,11 +90,11 @@ ul {
 }
 
 li {
-    background: white;
-    padding: 10px;
-    margin-bottom: 8px;
-    border-radius: 6px;
-    border: 1px solid #ddd;
+    background: #ffffff;
+    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -111,7 +118,7 @@ li span {
 /* Barra progreso */
 #barra-container {
     width: 100%;
-    background-color: #e0e0e0;
+    background-color: #e5e7eb;
     border-radius: 10px;
     overflow: hidden;
     height: 20px;
@@ -124,6 +131,7 @@ li span {
     transition: width 0.4s ease;
 }
 
+/* Mensajes */
 .mensaje {
     padding: 10px;
     border-radius: 6px;
@@ -141,25 +149,74 @@ li span {
     color: #721c24;
 }
 
-
+/* Usuario */
 .usuario-activo {
     text-align: center;
     color: #555;
     margin-bottom: 20px;
 }
 
-
-.card {
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
-}
-
+/* Login */
 .login {
     max-width: 300px;
     margin: 100px auto;
     text-align: center;
+}
+
+/* Conversor */
+.conversor-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 15px;
+}
+
+.campo {
+    flex: 1;
+}
+
+.campo label {
+    font-size: 13px;
+    margin-bottom: 4px;
+    color: #6b7280;
+}
+
+.campo select {
+    font-weight: bold;
+    text-align: center;
+}
+
+.swap-btn {
+    margin-top: 22px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: none;
+    background-color: #111;
+    /* negro */
+    color: white;
+    cursor: pointer;
+    font-size: 16px;
+    transition: 0.2s;
+    width: auto;
+    align-self: flex-end;
+}
+
+.swap-btn:hover {
+    background-color: #333;
+}
+
+/* Resultado conversor */
+#resultado-conversion {
+    margin-top: 15px;
+    font-weight: bold;
+    font-size: 16px;
+    text-align: center;
+}
+
+#tasa-info {
+    display: block;
+    text-align: center;
+    margin-top: 5px;
+    color: #6b7280;
+    font-size: 13px;
 }
