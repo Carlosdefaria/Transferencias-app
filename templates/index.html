@@ -36,6 +36,28 @@
     </div>
 
     <div class="card">
+    <h2>Conversor de moneda</h2>
+
+    <input type="number" id="cantidad" placeholder="Cantidad" step="any">
+
+    <select id="de">
+        <option value="EUR">EUR</option>
+        <option value="USD">USD</option>
+        <option value="GBP">GBP</option>
+    </select>
+
+    <select id="a">
+        <option value="USD">USD</option>
+        <option value="EUR">EUR</option>
+        <option value="GBP">GBP</option>
+    </select>
+
+    <button onclick="convertirMoneda()">Convertir</button>
+
+    <p id="resultado-conversion"></p>
+    </div>
+
+    <div class="card">
         <h2>Filtrar por mes</h2>
         <input type="month" id="filtro-mes">
         <button onclick="aplicarFiltro()">Aplicar filtro</button>
@@ -84,6 +106,50 @@
 </div>
 
 <script>
+
+
+async function convertirMoneda() {
+    const cantidad = parseFloat(document.getElementById("cantidad").value);
+    const de = document.getElementById("de").value;
+    const a = document.getElementById("a").value;
+    const resultadoElem = document.getElementById("resultado-conversion");
+
+    // ✅ Validación robusta
+    if (isNaN(cantidad) || cantidad <= 0) {
+        mostrarMensaje("Introduce una cantidad válida", "error");
+        return;
+    }
+
+    // ✅ Si es misma moneda
+    if (de === a) {
+        resultadoElem.innerText =
+            `${cantidad} ${de} = ${cantidad.toFixed(2)} ${a}`;
+        return;
+    }
+
+    try {
+        // ✅ UX: mensaje mientras carga
+        resultadoElem.innerText = "Calculando...";
+
+        const response = await fetch(`https://api.exchangerate-api.com/v4/latest/${de}`);
+        const data = await response.json();
+
+        const tasa = data.rates[a];
+        const resultado = cantidad * tasa;
+
+        // ✅ Formateo profesional
+        const resultadoFormateado = new Intl.NumberFormat('es-ES', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(resultado);
+
+        resultadoElem.innerText =
+            `${cantidad} ${de} = ${resultadoFormateado} ${a}`;
+
+    } catch (error) {
+        resultadoElem.innerText = "Error al obtener tasa de cambio";
+    }
+}
 
 async function login() {
     const pin = document.getElementById("pin").value;
