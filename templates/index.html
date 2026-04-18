@@ -38,24 +38,35 @@
     <div class="card">
     <h2>Conversor de moneda</h2>
 
-    <input type="number" id="cantidad" placeholder="Cantidad" step="any">
+    <input type="number" id="cantidad" placeholder="Cantidad a convertir" step="any">
 
-    <select id="de">
-        <option value="EUR">EUR</option>
-        <option value="USD">USD</option>
-        <option value="GBP">GBP</option>
-    </select>
+    <div style="display:flex; align-items:center; gap:10px; margin-top:10px;">
+        <div style="flex:1;">
+            <label>De:</label>
+            <select id="de">
+                <option value="EUR">EUR</option>
+                <option value="USD">USD</option>
+                <option value="GBP">GBP</option>
+            </select>
+        </div>
 
-    <select id="a">
-        <option value="USD">USD</option>
-        <option value="EUR">EUR</option>
-        <option value="GBP">GBP</option>
-    </select>
+        <button onclick="invertirMonedas()" style="margin-top:20px;">🔄</button>
 
-    <button onclick="convertirMoneda()">Convertir</button>
+        <div style="flex:1;">
+            <label>A:</label>
+            <select id="a">
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+                <option value="GBP">GBP</option>
+            </select>
+        </div>
+    </div>
+
+    <button onclick="convertirMoneda()" style="margin-top:15px;">Convertir</button>
 
     <p id="resultado-conversion"></p>
-    </div>
+    <small id="tasa-info" style="color:gray;"></small>
+</div>
 
     <div class="card">
         <h2>Filtrar por mes</h2>
@@ -123,7 +134,7 @@ async function convertirMoneda() {
     // ✅ Si es misma moneda
     if (de === a) {
         resultadoElem.innerText =
-            `${cantidad} ${de} = ${cantidad.toFixed(2)} ${a}`;
+            `${cantidad} ${de} → ${cantidad.toFixed(2)} ${a}`;
         return;
     }
 
@@ -144,11 +155,25 @@ async function convertirMoneda() {
         }).format(resultado);
 
         resultadoElem.innerText =
-            `${cantidad} ${de} = ${resultadoFormateado} ${a}`;
+            `${cantidad} ${de} → ${resultadoFormateado} ${a}`;
+            
+        document.getElementById("tasa-info").innerText =
+            `1 ${de} = ${tasa.toFixed(4)} ${a}`;
 
     } catch (error) {
         resultadoElem.innerText = "Error al obtener tasa de cambio";
     }
+
+    
+}
+
+function invertirMonedas() {
+    const de = document.getElementById("de");
+    const a = document.getElementById("a");
+
+    const temp = de.value;
+    de.value = a.value;
+    a.value = temp;
 }
 
 async function login() {
