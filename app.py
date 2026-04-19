@@ -2,34 +2,40 @@ import sqlite3
 import os
 import psycopg
 from flask import Flask, request, jsonify, render_template
+import requests
 from datetime import datetime
+
 
 app = Flask(__name__)
 
 
-# ------------------------
-# DB CONNECTION
-# ------------------------
+def convertir_moneda(monto, de="EUR", a="EUR"):
+    if de == a:
+        return monto
+
+    try:
+        url = f"https://api.exchangerate-api.com/v4/latest/{de}"
+        response = requests.get(url)
+        data = response.json()
+
+        tasa = data["rates"].get(a, 1)
+        return monto * tasa
+
+    except:
+        return monto  # fallback
 
 
 def get_db_connection():
     database_url = os.environ.get("DATABASE_URL")
 
-    # 👉 Si estamos en producción (Render)
-    if database_url:
-        # fix postgres:// → postgresql://
-        if database_url.startswith("postgres://"):
-            database_url = database_url.replace(
-                "postgres://", "postgresql://", 1)
+    if not database_url:
+        raise Exception("DATABASE_URL no está configurada")
 
-        conn = psycopg.connect(database_url)
-        return conn
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace(
+            "postgres://", "postgresql://", 1)
 
-    # 👉 Si estamos en local (SQLite)
-    else:
-        conn = sqlite3.connect("database.db")
-        conn.row_factory = sqlite3.Row
-        return conn
+    return psycopg.connect(database_url)
 
 
 def crear_tablas_postgres():
@@ -79,42 +85,6 @@ def crear_tablas_postgres():
 with app.app_context():
     crear_tablas_postgres()
 
-
-# ------------------------
-# INIT DB
-# ------------------------
-
-
-def init_db():
-    conn = get_db_connection()
-
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS transferencias (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            monto REAL NOT NULL,
-            fecha TEXT NOT NULL,
-            descripcion TEXT
-        )
-    """)
-
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS config (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            objetivo_total REAL
-        )
-    """)
-
-    # 👉 NUEVO BLOQUE (objetivo fijo automático)
-    existe = conn.execute("SELECT COUNT(*) as count FROM config").fetchone()
-
-    if existe["count"] == 0:
-        conn.execute(
-            "INSERT INTO config (objetivo_total) VALUES (?)",
-            (1070,)
-        )
-
-    conn.commit()
-    conn.close()
 
 # ------------------------
 # ROUTES
@@ -194,6 +164,7 @@ def obtener_transferencias():
     cursor = conn.cursor()
 
     persona = request.args.get("persona")
+    moneda = request.args.get("moneda", "EUR")
 
     if not persona:
         return jsonify({"error": "Falta persona"}), 400
@@ -213,9 +184,11 @@ def obtener_transferencias():
     resultado = []
 
     for fila in filas:
+        monto_convertido = convertir_moneda(fila[1], "EUR", moneda)
+
         resultado.append({
             "id": fila[0],
-            "monto": fila[1],
+            "monto": monto_convertido,
             "fecha": fila[2],
             "descripcion": fila[3],
             "persona": fila[4],
@@ -281,6 +254,7 @@ def obtener_resumen():
 
     mes = request.args.get("mes")
     persona = request.args.get("persona")
+    moneda = request.args.get("moneda", "EUR")
 
     if not persona:
         return jsonify({"error": "Falta persona"}), 400
@@ -323,6 +297,11 @@ def obtener_resumen():
 
     cursor.close()
     conn.close()
+
+    total_confirmado = convertir_moneda(total_confirmado, "EUR", moneda)
+    objetivo = convertir_moneda(objetivo, "EUR", moneda)
+    restante = convertir_moneda(restante, "EUR", moneda)
+    pendiente = convertir_moneda(pendiente, "EUR", moneda)
 
     return jsonify({
         "total_confirmado": total_confirmado,

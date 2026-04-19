@@ -36,6 +36,16 @@
     </div>
 
     <div class="card">
+    <h2>Moneda</h2>
+
+    <select id="moneda" onchange="cargarResumen()">
+        <option value="EUR">EUR (€)</option>
+        <option value="USD">USD ($)</option>
+        <option value="GBP">GBP (£)</option>
+    </select>
+    </div>
+
+    <div class="card">
     <h2>Conversor de moneda</h2>
 
     <input type="number" id="cantidad" placeholder="Cantidad a convertir" step="any">
@@ -120,20 +130,17 @@
 
 <script>
 
-
 async function convertirMoneda() {
     const cantidad = parseFloat(document.getElementById("cantidad").value);
     const de = document.getElementById("de").value;
     const a = document.getElementById("a").value;
     const resultadoElem = document.getElementById("resultado-conversion");
 
-    // ✅ Validación robusta
     if (isNaN(cantidad) || cantidad <= 0) {
         mostrarMensaje("Introduce una cantidad válida", "error");
         return;
     }
 
-    // ✅ Si es misma moneda
     if (de === a) {
         resultadoElem.innerText =
             `${cantidad} ${de} → ${cantidad.toFixed(2)} ${a}`;
@@ -141,7 +148,6 @@ async function convertirMoneda() {
     }
 
     try {
-        // ✅ UX: mensaje mientras carga
         resultadoElem.innerText = "Calculando...";
 
         const response = await fetch(`https://api.exchangerate-api.com/v4/latest/${de}`);
@@ -150,7 +156,6 @@ async function convertirMoneda() {
         const tasa = data.rates[a];
         const resultado = cantidad * tasa;
 
-        // ✅ Formateo profesional
         const resultadoFormateado = new Intl.NumberFormat('es-ES', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
@@ -158,15 +163,20 @@ async function convertirMoneda() {
 
         resultadoElem.innerText =
             `${cantidad} ${de} → ${resultadoFormateado} ${a}`;
-            
+
         document.getElementById("tasa-info").innerText =
             `1 ${de} = ${tasa.toFixed(4)} ${a}`;
 
     } catch (error) {
         resultadoElem.innerText = "Error al obtener tasa de cambio";
     }
+}
 
-    
+function obtenerSimbolo(moneda) {
+    if (moneda === "EUR") return "€";
+    if (moneda === "USD") return "$";
+    if (moneda === "GBP") return "£";
+    return "";
 }
 
 function invertirMonedas() {
@@ -195,7 +205,6 @@ async function login() {
     }
 }
 
-// 🔥 NUEVA FUNCIÓN 
 function mostrarMensaje(texto, tipo = "exito") {
     const mensaje = document.getElementById("mensaje");
 
@@ -261,7 +270,10 @@ function limpiarFiltro() {
 
 async function cargarResumen() {
     let persona = getPersonaSeleccionada();
-    let url = `/resumen?persona=${persona}`;
+    let moneda = document.getElementById("moneda").value;
+    let simbolo = obtenerSimbolo(moneda);
+
+    let url = `/resumen?persona=${persona}&moneda=${moneda}`;
 
     if (mesSeleccionado) {
         url += `&mes=${mesSeleccionado}`;
@@ -270,10 +282,10 @@ async function cargarResumen() {
     const respuesta = await fetch(url);
     const data = await respuesta.json();
 
-    document.getElementById("confirmado").innerText = formatearDinero(data.total_confirmado);
-    document.getElementById("objetivo").innerText = formatearDinero(data.objetivo);
-    document.getElementById("restante").innerText = formatearDinero(data.restante);
-    document.getElementById("pendiente").innerText = formatearDinero(data.pendiente);
+    document.getElementById("confirmado").innerText = formatearDinero(data.total_confirmado) + " " + simbolo;
+    document.getElementById("objetivo").innerText = formatearDinero(data.objetivo) + " " + simbolo;
+    document.getElementById("restante").innerText = formatearDinero(data.restante) + " " + simbolo;
+    document.getElementById("pendiente").innerText = formatearDinero(data.pendiente) + " " + simbolo;
 
     const restanteElem = document.getElementById("restante");
     restanteElem.style.color = data.restante <= 0 ? "green" : "red";
@@ -297,12 +309,15 @@ async function cargarResumen() {
     }
 
     document.getElementById("texto-progreso").innerText =
-        `${formatearDinero(data.total_confirmado)}€ / ${formatearDinero(data.objetivo)}€`;
+        `${formatearDinero(data.total_confirmado)} ${simbolo} / ${formatearDinero(data.objetivo)} ${simbolo}`;
 }
 
 async function cargarTransferencias() {
     const persona = getPersonaSeleccionada();
-    const respuesta = await fetch(`/transferencias?persona=${persona}`);
+    const moneda = document.getElementById("moneda").value;
+    const simbolo = obtenerSimbolo(moneda);
+
+    const respuesta = await fetch(`/transferencias?persona=${persona}&moneda=${moneda}`);
     const data = await respuesta.json();
 
     const lista = document.getElementById("lista-transferencias");
@@ -316,7 +331,7 @@ async function cargarTransferencias() {
 
         item.innerHTML = `
             <span>
-                <strong>${formatearDinero(t.monto)}€</strong> — ${fecha}<br>
+                <strong>${formatearDinero(t.monto)} ${simbolo}</strong> — ${fecha}<br>
                 <small>${t.descripcion || "Sin descripción"}</small>
             </span>
 
