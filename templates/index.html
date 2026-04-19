@@ -107,7 +107,7 @@
         <h2>Actualizar objetivo</h2>
 
         <input type="number" id="nuevo-objetivo" placeholder="Nuevo objetivo">
-        <button onclick="guardarObjetivo()">Guardar objetivo</button>
+        <button id="btn-objetivo" onclick="guardarObjetivo()">Guardar objetivo</button>
     </div>
 
 
@@ -117,7 +117,7 @@
         <input type="number" id="monto" placeholder="Monto">
         <input type="date" id="fecha">
         <input type="text" id="descripcion" placeholder="Descripción">
-        <button onclick="agregarTransferencia()">Agregar</button>
+        <button id="btn-agregar" onclick="agregarTransferencia()">Agregar</button>
     </div>
 
     <div class="card">
@@ -129,6 +129,30 @@
 </div>
 
 <script>
+
+async function apiRequest(url, options = {}) {
+    try {
+        const res = await fetch(url, options);
+
+        let data = null;
+
+        try {
+            data = await res.json();
+        } catch {
+            // respuesta vacía (ej: DELETE)
+        }
+
+        if (!res.ok) {
+            throw new Error(data?.error || "Error en la petición");
+        }
+
+        return data;
+
+    } catch (error) {
+        mostrarMensaje(error.message, "error");
+        throw error;
+    }
+}
 
 async function convertirMoneda() {
     const cantidad = parseFloat(document.getElementById("cantidad").value);
@@ -279,8 +303,7 @@ async function cargarResumen() {
         url += `&mes=${mesSeleccionado}`;
     }
 
-    const respuesta = await fetch(url);
-    const data = await respuesta.json();
+    const data = await apiRequest(url);
 
     document.getElementById("confirmado").innerText = formatearDinero(data.total_confirmado) + " " + simbolo;
     document.getElementById("objetivo").innerText = formatearDinero(data.objetivo) + " " + simbolo;
@@ -327,6 +350,9 @@ async function cargarTransferencias() {
         if (mesSeleccionado && !t.fecha.startsWith(mesSeleccionado)) return;
 
         const item = document.createElement("li");
+        item.id = `transferencia-${t.id}`;
+        item.dataset.confirmada = t.confirmada;
+
         const fecha = new Date(t.fecha).toLocaleDateString("es-ES");
 
         item.innerHTML = `
@@ -336,12 +362,12 @@ async function cargarTransferencias() {
             </span>
 
             <div style="display:flex; gap:5px;">
-                <button onclick="toggleConfirmar(${t.id})">
+                <button id="btn-confirmar-${t.id}" onclick="toggleConfirmar(${t.id})">
                     ${t.confirmada ? "Desconfirmar" : "Confirmar"}
                 </button>
 
                 ${!t.confirmada ? `
-                    <button class="btn-eliminar" onclick="eliminarTransferencia(${t.id})">X</button>
+                    <button id="btn-eliminar-${t.id}" class="btn-eliminar" onclick="eliminarTransferencia(${t.id})">X</button>
                 ` : ""}
             </div>
         `;
@@ -355,6 +381,8 @@ async function cargarTransferencias() {
 }
 
 async function agregarTransferencia() {
+    const btn = document.getElementById("btn-agregar");
+
     const monto = document.getElementById("monto").value;
     const fecha = document.getElementById("fecha").value;
     const descripcion = document.getElementById("descripcion").value;
@@ -364,8 +392,13 @@ async function agregarTransferencia() {
         return;
     }
 
+    // 🔹 ACTIVAR LOADING
+    btn.disabled = true;
+    const textoOriginal = btn.innerText;
+    btn.innerText = "Guardando...";
+
     try {
-        const response = await fetch("/transferencias", {
+        await apiRequest("/transferencias", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({
@@ -376,50 +409,108 @@ async function agregarTransferencia() {
             })
         });
 
-        const data = await response.json();
-
-        if (!response.ok) {
-            mostrarMensaje(data.error || "Error", "error");
-            return;
-        }
-
         mostrarMensaje("Transferencia agregada correctamente");
 
+        // limpiar inputs
         document.getElementById("monto").value = "";
         ponerFechaHoy();
         document.getElementById("descripcion").value = "";
         document.getElementById("monto").focus();
 
+        // reset filtro
         mesSeleccionado = null;
         document.getElementById("filtro-mes").value = "";
 
+        // recargar datos
         cargarResumen();
         cargarTransferencias();
 
-    } catch {
-        mostrarMensaje("Error de conexión", "error");
+    } catch (error) {
+        // ya manejado
+    } finally {
+        // 🔹 DESACTIVAR LOADING (SIEMPRE)
+        btn.disabled = false;
+        btn.innerText = textoOriginal;
     }
 }
 
 async function eliminarTransferencia(id) {
+    const btn = document.getElementById(`btn-eliminar-${id}`);
+
     if (!confirm("¿Eliminar esta transferencia?")) return;
 
-    await fetch(`/transferencias/${id}`, { method: "DELETE" });
+    // 🔹 loading
+    btn.disabled = true;
+    btn.innerText = "...";
 
-    cargarResumen();
-    cargarTransferencias();
+    try {
+        await apiRequest(`/transferencias/${id}`, {
+            method: "DELETE"
+        });
+
+        mostrarMensaje("Transferencia eliminada");
+
+        const elemento = document.getElementById(`transferencia-${id}`);
+        if (elemento) elemento.remove();
+
+        cargarResumen();
+
+    } catch (error) {
+        btn.disabled = false;
+        btn.innerText = "X";
+    }
 }
 
 async function toggleConfirmar(id) {
-    await fetch(`/transferencias/${id}/confirmar`, {
-        method: "PATCH"
-    });
+    const btn = document.getElementById(`btn-confirmar-${id}`);
+    const textoOriginal = btn.innerText;
 
-    cargarTransferencias();
-    cargarResumen();
+    // 🔹 activar loading
+    btn.disabled = true;
+    btn.innerText = "Procesando...";
+
+    try {
+        await apiRequest(`/transferencias/${id}/confirmar`, {
+            method: "PATCH"
+        });
+
+        const item = document.getElementById(`transferencia-${id}`);
+        const btnEliminar = document.getElementById(`btn-eliminar-${id}`);
+
+        const estaConfirmada = item.dataset.confirmada === "true";
+
+        if (estaConfirmada) {
+            item.style.backgroundColor = "";
+            btn.innerText = "Confirmar";
+            item.dataset.confirmada = "false";
+
+            if (btnEliminar) {
+                btnEliminar.style.display = "inline-block";
+            }
+
+        } else {
+            item.style.backgroundColor = "#d4edda";
+            btn.innerText = "Desconfirmar";
+            item.dataset.confirmada = "true";
+
+            if (btnEliminar) {
+                btnEliminar.style.display = "none";
+            }
+        }
+
+        cargarResumen();
+
+    } catch (error) {
+        // ya manejado
+    } finally {
+        // 🔹 desactivar loading (pero ojo con el texto)
+        btn.disabled = false;
+    }
 }
 
 async function guardarObjetivo() {
+    const btn = document.getElementById("btn-objetivo");
+
     const objetivo = document.getElementById("nuevo-objetivo").value;
 
     if (!objetivo || objetivo <= 0) {
@@ -427,8 +518,13 @@ async function guardarObjetivo() {
         return;
     }
 
+    // 🔹 activar loading
+    const textoOriginal = btn.innerText;
+    btn.disabled = true;
+    btn.innerText = "Guardando...";
+
     try {
-        const response = await fetch("/objetivo", {
+        await apiRequest("/objetivo", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({
@@ -437,18 +533,17 @@ async function guardarObjetivo() {
             })
         });
 
-        if (!response.ok) {
-            mostrarMensaje("Error al guardar objetivo", "error");
-            return;
-        }
-
         mostrarMensaje("Objetivo actualizado");
 
         document.getElementById("nuevo-objetivo").value = "";
         cargarResumen();
 
-    } catch {
-        mostrarMensaje("Error de conexión", "error");
+    } catch (error) {
+        // ya manejado por apiRequest
+    } finally {
+        // 🔹 desactivar loading
+        btn.disabled = false;
+        btn.innerText = textoOriginal;
     }
 }
 
