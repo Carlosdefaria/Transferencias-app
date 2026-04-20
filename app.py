@@ -1,15 +1,21 @@
-import sqlite3
 import os
 import psycopg
 from flask import Flask, request, jsonify, render_template
 import requests
 from datetime import datetime
 
-
 app = Flask(__name__)
 
 
+# ------------------------
+# UTILIDADES
+# ------------------------
+
 def convertir_moneda(monto, de="EUR", a="EUR"):
+    """
+    Convierte un monto entre monedas usando una API externa.
+    """
+
     if de == a:
         return monto
 
@@ -22,11 +28,19 @@ def convertir_moneda(monto, de="EUR", a="EUR"):
         return monto * tasa
 
     except Exception as e:
+        # fallback: devolver el monto original si falla la API
         print("ERROR CONVERSION:", e)
         return monto
 
 
 def get_db_connection():
+    """
+    Crea y devuelve una conexión a PostgreSQL usando DATABASE_URL.
+
+    Maneja el caso típico de Render donde la URL viene como 'postgres://'
+    y debe convertirse a 'postgresql://'
+    """
+
     database_url = os.environ.get("DATABASE_URL")
 
     if not database_url:
@@ -40,10 +54,16 @@ def get_db_connection():
 
 
 def crear_tablas_postgres():
+    """
+    Inicializa las tablas necesarias si no existen.
+
+    - transferencias: guarda cada movimiento
+    - config: guarda configuración por usuario (ej: objetivo mensual)
+    """
     conn = get_db_connection()
     cur = conn.cursor()
 
-    # Tabla transferencias
+    # Tabla principal
     cur.execute("""
         CREATE TABLE IF NOT EXISTS transferencias (
             id SERIAL PRIMARY KEY,
@@ -55,7 +75,7 @@ def crear_tablas_postgres():
         );
     """)
 
-    # ✅ NUEVA TABLA CONFIG (POR PERSONA)
+    # Tabla de configuración (objetivo por persona)
     cur.execute("""
         CREATE TABLE IF NOT EXISTS config (
             id SERIAL PRIMARY KEY,
@@ -64,7 +84,7 @@ def crear_tablas_postgres():
         );
     """)
 
-    # Insert inicial (2 usuarios)
+    # Insert inicial (solo si está vacía)
     cur.execute("SELECT COUNT(*) FROM config")
     count = cur.fetchone()[0]
 
@@ -83,6 +103,7 @@ def crear_tablas_postgres():
     conn.close()
 
 
+# Se ejecuta al iniciar la app
 with app.app_context():
     crear_tablas_postgres()
 
@@ -91,37 +112,46 @@ with app.app_context():
 # ROUTES
 # ------------------------
 
-
 @app.route("/")
 def home():
+    """Renderiza el frontend"""
     return render_template("index.html")
-
-# 👉 CREAR TRANSFERENCIA
 
 
 @app.route("/login", methods=["POST"])
 def login():
+    """
+    Login básico por PIN.
+    """
     data = request.get_json()
     pin = data.get("pin")
 
-    PIN_CORRECTO = "1234"  # luego esto lo puedes mover a variable de entorno
-
-    if pin == PIN_CORRECTO:
+    if pin == "1234":
         return jsonify({"ok": True})
-    else:
-        return jsonify({"ok": False}), 401
 
+    return jsonify({"ok": False}), 401
+
+
+# ------------------------
+# TRANSFERENCIAS
+# ------------------------
 
 @app.route("/transferencias", methods=["POST"])
 def crear_transferencia():
+    """
+    Crea una nueva transferencia.
+
+    Valida:
+    - monto válido
+    - fecha válida
+    - persona obligatoria
+    """
     data = request.get_json()
 
     monto = data.get("monto")
     fecha = data.get("fecha")
     descripcion = data.get("descripcion", "")
     persona = data.get("persona")
-
-    # Validaciones
 
     if not persona:
         return jsonify({"error": "Falta la persona"}), 400
@@ -135,12 +165,9 @@ def crear_transferencia():
         return jsonify({"error": "El monto debe ser mayor a 0"}), 400
 
     try:
-        datetime.strptime(fecha, "%Y-%m-%d").date()
+        datetime.strptime(fecha, "%Y-%m-%d")
     except:
         return jsonify({"error": "Fecha inválida"}), 400
-
-    if fecha is None:
-        return jsonify({"error": "Faltan datos"}), 400
 
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -159,6 +186,12 @@ def crear_transferencia():
 
 @app.route("/transferencias", methods=["GET"])
 def obtener_transferencias():
+    """
+    Devuelve todas las transferencias de una persona.
+    - Ordenadas por fecha descendente
+    - Convierte moneda si es necesario
+    """
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -183,11 +216,9 @@ def obtener_transferencias():
     resultado = []
 
     for fila in filas:
-        monto_convertido = convertir_moneda(fila[1], "EUR", moneda)
-
         resultado.append({
             "id": fila[0],
-            "monto": monto_convertido,
+            "monto": convertir_moneda(fila[1], "EUR", moneda),
             "fecha": fila[2],
             "descripcion": fila[3],
             "persona": fila[4],
@@ -199,10 +230,18 @@ def obtener_transferencias():
 
 @app.route("/transferencias/<int:id>", methods=["DELETE"])
 def eliminar_transferencia(id):
-    conn = get_db_connection()
+    """
+    Elimina una transferencia por ID.
+    Devuelve error si no existe.
+    """
 
+    conn = get_db_connection()
     cursor = conn.cursor()
+
     cursor.execute("DELETE FROM transferencias WHERE id = %s", (id,))
+
+    if cursor.rowcount == 0:
+        return jsonify({"error": "No existe"}), 404
 
     conn.commit()
     cursor.close()
@@ -213,10 +252,14 @@ def eliminar_transferencia(id):
 
 @app.route("/transferencias/<int:id>/confirmar", methods=["PATCH"])
 def confirmar_transferencia(id):
+    """
+    Toggle de estado:
+    - confirmada = True / False
+    """
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # Obtener estado actual
     cursor.execute(
         "SELECT confirmada FROM transferencias WHERE id = %s",
         (id,)
@@ -224,12 +267,9 @@ def confirmar_transferencia(id):
     resultado = cursor.fetchone()
 
     if not resultado:
-        return jsonify({"error": "Transferencia no encontrada"}), 404
+        return jsonify({"error": "No encontrada"}), 404
 
-    estado_actual = resultado[0]
-
-    # Toggle (cambiar true/false)
-    nuevo_estado = not estado_actual
+    nuevo_estado = not resultado[0]
 
     cursor.execute(
         "UPDATE transferencias SET confirmada = %s WHERE id = %s",
@@ -240,106 +280,98 @@ def confirmar_transferencia(id):
     cursor.close()
     conn.close()
 
-    return jsonify({
-        "mensaje": "Estado actualizado",
-        "confirmada": nuevo_estado
-    })
+    return jsonify({"confirmada": nuevo_estado})
 
+
+# ------------------------
+# RESUMEN
+# ------------------------
 
 @app.route("/resumen", methods=["GET"])
 def obtener_resumen():
+    """
+    Calcula:
+    - total confirmado
+    - pendiente
+    - objetivo
+    - restante
+
+    Todo filtrado por:
+    - persona
+    - mes (o mes actual por defecto)
+    """
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    mes = request.args.get("mes")
     persona = request.args.get("persona")
     moneda = request.args.get("moneda", "EUR")
+    mes = request.args.get("mes") or datetime.now().strftime("%Y-%m")
 
-    if not persona:
-        return jsonify({"error": "Falta persona"}), 400
-
-    if mes:
-        mes_a_usar = mes
-    else:
-        hoy = datetime.now()
-        mes_a_usar = hoy.strftime("%Y-%m")
-
-    # ✅ CONFIRMADO
+    # Total confirmado
     cursor.execute("""
         SELECT COALESCE(SUM(monto), 0)
         FROM transferencias
         WHERE TO_CHAR(fecha, 'YYYY-MM') = %s
         AND persona = %s
         AND confirmada = TRUE
-    """, (mes_a_usar, persona))
-    total_confirmado = cursor.fetchone()[0]
+    """, (mes, persona))
+    total = cursor.fetchone()[0]
 
-    # ✅ PENDIENTE
+    # Pendiente
     cursor.execute("""
         SELECT COALESCE(SUM(monto), 0)
         FROM transferencias
         WHERE TO_CHAR(fecha, 'YYYY-MM') = %s
         AND persona = %s
         AND confirmada = FALSE
-    """, (mes_a_usar, persona))
+    """, (mes, persona))
     pendiente = cursor.fetchone()[0]
 
-    # OBJETIVO
+    # Objetivo
     cursor.execute(
         "SELECT objetivo_total FROM config WHERE persona = %s LIMIT 1",
         (persona,)
     )
-    objetivo_row = cursor.fetchone()
-    objetivo = objetivo_row[0] if objetivo_row else 0
-
-    restante = objetivo - total_confirmado
+    objetivo = cursor.fetchone()[0]
 
     cursor.close()
     conn.close()
 
-    total_confirmado = convertir_moneda(total_confirmado, "EUR", moneda)
-    objetivo = convertir_moneda(objetivo, "EUR", moneda)
-    restante = convertir_moneda(restante, "EUR", moneda)
-    pendiente = convertir_moneda(pendiente, "EUR", moneda)
-
     return jsonify({
-        "total_confirmado": total_confirmado,
-        "pendiente": pendiente,
-        "objetivo": objetivo,
-        "restante": restante
+        "total_confirmado": convertir_moneda(total, "EUR", moneda),
+        "pendiente": convertir_moneda(pendiente, "EUR", moneda),
+        "objetivo": convertir_moneda(objetivo, "EUR", moneda),
+        "restante": convertir_moneda(objetivo - total, "EUR", moneda)
     })
 
 
 @app.route("/objetivo", methods=["POST"])
 def guardar_objetivo():
-    try:
-        data = request.get_json()
-        objetivo = data.get("objetivo")
-        persona = data.get("persona")
+    """
+    Actualiza el objetivo mensual de una persona.
+    """
+    data = request.get_json()
 
-        if not objetivo or objetivo <= 0:
-            return jsonify({"error": "Objetivo inválido"}), 400
+    objetivo = data.get("objetivo")
+    persona = data.get("persona")
 
-        if not persona:
-            return jsonify({"error": "Falta persona"}), 400
+    if not objetivo or objetivo <= 0:
+        return jsonify({"error": "Objetivo inválido"}), 400
 
-        conn = get_db_connection()
-        cursor = conn.cursor()
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
-        cursor.execute(
-            "UPDATE config SET objetivo_total = %s WHERE persona = %s",
-            (objetivo, persona)
-        )
+    cursor.execute(
+        "UPDATE config SET objetivo_total = %s WHERE persona = %s",
+        (objetivo, persona)
+    )
 
-        conn.commit()
-        cursor.close()
-        conn.close()
+    conn.commit()
+    cursor.close()
+    conn.close()
 
-        return jsonify({"mensaje": "Objetivo guardado"})
-
-    except Exception as e:
-        print("ERROR OBJETIVO:", e)
-        return jsonify({"error": "Error interno"}), 500
+    return jsonify({"mensaje": "Objetivo guardado"})
 
 
 if __name__ == "__main__":

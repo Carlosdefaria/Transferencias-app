@@ -334,65 +334,64 @@
         document.getElementById("texto-progreso").innerText =
             `${formatearDinero(data.total_confirmado)} ${simbolo} / ${formatearDinero(data.objetivo)} ${simbolo}`;
     }
+async function cargarTransferencias() {
+    const persona = getPersonaSeleccionada();
+    const moneda = document.getElementById("moneda").value;
+    const simbolo = obtenerSimbolo(moneda);
 
-    async function cargarTransferencias() {
-        const persona = getPersonaSeleccionada();
-        const moneda = document.getElementById("moneda").value;
-        const simbolo = obtenerSimbolo(moneda);
+    const data = await apiRequest(`/transferencias?persona=${persona}&moneda=${moneda}`);
 
-        const respuesta = await fetch(`/transferencias?persona=${persona}&moneda=${moneda}`);
-        const data = await respuesta.json();
+    const lista = document.getElementById("lista-transferencias");
+    lista.innerHTML = "";
 
-        const lista = document.getElementById("lista-transferencias");
-        lista.innerHTML = "";
+    data.forEach(t => {
+        if (mesSeleccionado && !t.fecha.startsWith(mesSeleccionado)) return;
 
-        data.forEach(t => {
-            if (mesSeleccionado && !t.fecha.startsWith(mesSeleccionado)) return;
+        const item = document.createElement("li");
+        item.id = `transferencia-${t.id}`;
+        item.dataset.confirmada = t.confirmada;
 
-            const item = document.createElement("li");
-            item.id = `transferencia-${t.id}`;
-            item.dataset.confirmada = t.confirmada;
+        const fecha = new Date(t.fecha).toLocaleDateString("es-ES");
 
-            const fecha = new Date(t.fecha).toLocaleDateString("es-ES");
+        item.innerHTML = `
+            <div class="transferencia">
+                
+                <div class="transferencia-info">
+                    <div class="linea-principal">
+                        <span class="transferencia-monto">
+                            ${formatearDinero(t.monto)} ${simbolo}
+                        </span>
 
-            item.innerHTML = `
-                <div class="transferencia">
-                    
-                    <div class="transferencia-info">
-                        <div class="linea-principal">
-                            <span class="transferencia-monto">
-                                ${formatearDinero(t.monto)}${simbolo}
-                            </span>
-                            <span class="transferencia-fecha">
-                                ${fecha}
-                            </span>
-                        </div>
-
-                        <span class="transferencia-desc">
-                            ${t.descripcion || "Sin descripción"}
+                        <span class="transferencia-fecha">
+                            ${fecha}
                         </span>
                     </div>
 
-                    <div class="transferencia-acciones">
-                        <button id="btn-confirmar-${t.id}" onclick="toggleConfirmar(${t.id})">
-                            ${t.confirmada ? "Desconfirmar" : "Confirmar"}
-                        </button>
-
-                        ${!t.confirmada ? `
-                            <button id="btn-eliminar-${t.id}" class="btn-eliminar" onclick="eliminarTransferencia(${t.id})">X</button>
-                        ` : ""}
-                    </div>
-
+                    <span class="transferencia-desc">
+                        ${t.descripcion || "Sin descripción"}
+                    </span>
                 </div>
-            `;
 
-            if (t.confirmada) {
-                item.style.backgroundColor = "#d4edda";
-            }
+                <div class="transferencia-acciones">
+                    <button id="btn-confirmar-${t.id}" onclick="toggleConfirmar(${t.id})">
+                        ${t.confirmada ? "Desconfirmar" : "Confirmar"}
+                    </button>
 
-            lista.appendChild(item);
-        });
-    }
+                    ${!t.confirmada ? `
+                        <button id="btn-eliminar-${t.id}" class="btn-eliminar" onclick="eliminarTransferencia(${t.id})">X</button>
+                    ` : ""}
+                </div>
+
+            </div>
+        `;
+
+        if (t.confirmada) {
+            item.style.backgroundColor = "#d4edda";
+        }
+
+        lista.appendChild(item);
+    });
+}
 
     async function agregarTransferencia() {
         const btn = document.getElementById("btn-agregar");
