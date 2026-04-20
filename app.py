@@ -265,10 +265,25 @@ def eliminar_transferencia(id):
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("DELETE FROM transferencias WHERE id = %s", (id,))
+    # 🔒 Verificar si existe y si está confirmada
+    cursor.execute(
+        "SELECT confirmada FROM transferencias WHERE id = %s",
+        (id,)
+    )
+    resultado = cursor.fetchone()
 
-    if cursor.rowcount == 0:
+    if not resultado:
+        cursor.close()
+        conn.close()
         return jsonify({"error": "No existe"}), 404
+
+    if resultado[0]:
+        cursor.close()
+        conn.close()
+        return jsonify({"error": "No se puede eliminar una transferencia confirmada"}), 400
+
+    # ✅ Eliminar si no está confirmada
+    cursor.execute("DELETE FROM transferencias WHERE id = %s", (id,))
 
     conn.commit()
     cursor.close()
@@ -280,48 +295,76 @@ def eliminar_transferencia(id):
 @app.route("/transferencias/<int:id>/confirmar", methods=["PATCH"])
 @login_required
 def confirmar_transferencia(id):
-    """
-    Toggle de estado:
-    - confirmada = True / False
-    """
+    conn = None
+    cursor = None
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
 
-    cursor.execute(
-        "SELECT confirmada FROM transferencias WHERE id = %s",
-        (id,)
-    )
-    resultado = cursor.fetchone()
+        cursor.execute(
+            "SELECT confirmada FROM transferencias WHERE id = %s",
+            (id,)
+        )
+        resultado = cursor.fetchone()
 
-    if not resultado:
-        return jsonify({"error": "No encontrada"}), 404
+        if not resultado:
+            return jsonify({"error": "No encontrada"}), 404
 
-    nuevo_estado = not resultado[0]
+        nuevo_estado = not resultado[0]
 
-    cursor.execute(
-        "UPDATE transferencias SET confirmada = %s WHERE id = %s",
-        (nuevo_estado, id)
-    )
+        cursor.execute(
+            "UPDATE transferencias SET confirmada = %s WHERE id = %s",
+            (nuevo_estado, id)
+        )
 
-    conn.commit()
-    cursor.close()
-    conn.close()
+        conn.commit()
 
-    return jsonify({"confirmada": nuevo_estado})
+        return jsonify({"confirmada": nuevo_estado})
+
+    except Exception as e:
+        print("ERROR CONFIRMAR:", e)
+        return jsonify({"error": "Error interno"}), 500
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 
 @app.route("/transferencias/<int:id>", methods=["PUT"])
 @login_required
 def editar_transferencia(id):
+    conn = None
+    cursor = None
+
     try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # 🔒 Verificar si existe y si está confirmada
+        cursor.execute(
+            "SELECT confirmada, fecha FROM transferencias WHERE id = %s",
+            (id,)
+        )
+        resultado = cursor.fetchone()
+
+        if not resultado:
+            return jsonify({"error": "No encontrada"}), 404
+
+        confirmada, fecha_actual = resultado
+
+        if confirmada:
+            return jsonify({"error": "No se puede editar una transferencia confirmada"}), 400
+
         data = request.get_json()
 
         monto = data.get("monto")
         fecha = data.get("fecha")
         descripcion = data.get("descripcion")
 
-        # Validaciones básicas
+        # Validar monto
         if monto is not None:
             try:
                 monto = float(monto)
@@ -329,27 +372,15 @@ def editar_transferencia(id):
                     return jsonify({"error": "Monto inválido"}), 400
             except:
                 return jsonify({"error": "Monto inválido"}), 400
+
+        # Validar fecha
         if fecha:
             try:
                 datetime.strptime(fecha, "%Y-%m-%d")
             except:
                 return jsonify({"error": "Fecha inválida"}), 400
         else:
-            # Si no viene fecha, mantenemos la actual
-            conn = get_db_connection()
-            cursor = conn.cursor()
-
-            cursor.execute(
-                "SELECT fecha FROM transferencias WHERE id = %s", (id,))
-            fecha_actual = cursor.fetchone()[0]
-
-            cursor.close()
-            conn.close()
-
             fecha = fecha_actual
-
-        conn = get_db_connection()
-        cursor = conn.cursor()
 
         cursor.execute("""
             UPDATE transferencias
@@ -360,8 +391,6 @@ def editar_transferencia(id):
         """, (monto, fecha, descripcion, id))
 
         conn.commit()
-        cursor.close()
-        conn.close()
 
         return jsonify({"mensaje": "Transferencia actualizada"})
 
@@ -369,10 +398,16 @@ def editar_transferencia(id):
         print("ERROR EDITAR:", e)
         return jsonify({"error": "Error interno"}), 500
 
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 # ------------------------
 # RESUMEN
 # ------------------------
+
 
 @app.route("/resumen", methods=["GET"])
 @login_required

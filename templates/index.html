@@ -395,18 +395,22 @@ async function cargarTransferencias() {
                 </div>
 
                 <div class="transferencia-acciones">
+
+                ${!t.confirmada ? `
                     <button onclick="editarTransferencia(${t.id})">
                         Editar
                     </button>
+                ` : ""}
 
-                    <button id="btn-confirmar-${t.id}" onclick="toggleConfirmar(${t.id})">
-                        ${t.confirmada ? "Desconfirmar" : "Confirmar"}
-                    </button>
+                <button id="btn-confirmar-${t.id}" onclick="toggleConfirmar(${t.id})">
+                    ${t.confirmada ? "Desconfirmar" : "Confirmar"}
+                </button>
 
-                    ${!t.confirmada ? `
-                        <button id="btn-eliminar-${t.id}" class="btn-eliminar" onclick="eliminarTransferencia(${t.id})">X</button>
-                    ` : ""}
-                </div>
+                ${!t.confirmada ? `
+                    <button id="btn-eliminar-${t.id}" class="btn-eliminar" onclick="eliminarTransferencia(${t.id})">X</button>
+                ` : ""}
+
+            </div>
 
             </div>
         `;
@@ -594,7 +598,7 @@ async function toggleConfirmar(id) {
     const btn = document.getElementById(`btn-confirmar-${id}`);
     const textoOriginal = btn.innerText;
 
-    // 🔹 activar loading
+    // 🔹 loading
     btn.disabled = true;
     btn.innerText = "Procesando...";
 
@@ -603,39 +607,18 @@ async function toggleConfirmar(id) {
             method: "PATCH"
         });
 
-        const item = document.getElementById(`transferencia-${id}`);
-        const btnEliminar = document.getElementById(`btn-eliminar-${id}`);
-
-        const estaConfirmada = item.dataset.confirmada === "true";
-
-        if (estaConfirmada) {
-            item.style.backgroundColor = "";
-            btn.innerText = "Confirmar";
-            item.dataset.confirmada = "false";
-
-            if (btnEliminar) {
-                btnEliminar.style.display = "inline-block";
-            }
-
-        } else {
-            item.style.backgroundColor = "#d4edda";
-            btn.innerText = "Desconfirmar";
-            item.dataset.confirmada = "true";
-
-            if (btnEliminar) {
-                btnEliminar.style.display = "none";
-            }
-        }
-
-        cargarResumen();
+        await cargarResumen();
+        await cargarTransferencias();
 
     } catch (error) {
-        // ya manejado
+        // ya manejado en apiRequest
     } finally {
         btn.disabled = false;
         btn.innerText = textoOriginal;
     }
 }
+
+
     async function guardarObjetivo() {
         const btn = document.getElementById("btn-objetivo");
 
