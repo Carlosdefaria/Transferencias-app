@@ -3,14 +3,24 @@ import psycopg
 from flask import Flask, request, jsonify, render_template, session
 import requests
 from datetime import datetime
+from functools import wraps
 
 app = Flask(__name__)
-app.secret_key = "clave-super-secreta"
+app.secret_key = os.environ.get("SECRET_KEY", "dev-key")
 
 
 # ------------------------
 # UTILIDADES
 # ------------------------
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get("auth"):
+            return jsonify({"error": "No autorizado"}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
 
 def convertir_moneda(monto, de="EUR", a="EUR"):
     """
@@ -145,6 +155,7 @@ def check_auth():
 # ------------------------
 
 @app.route("/transferencias", methods=["POST"])
+@login_required
 def crear_transferencia():
     """
     Crea una nueva transferencia.
@@ -193,6 +204,7 @@ def crear_transferencia():
 
 
 @app.route("/transferencias", methods=["GET"])
+@login_required
 def obtener_transferencias():
     """
     Devuelve todas las transferencias de una persona.
@@ -237,6 +249,7 @@ def obtener_transferencias():
 
 
 @app.route("/transferencias/<int:id>", methods=["DELETE"])
+@login_required
 def eliminar_transferencia(id):
     """
     Elimina una transferencia por ID.
@@ -259,6 +272,7 @@ def eliminar_transferencia(id):
 
 
 @app.route("/transferencias/<int:id>/confirmar", methods=["PATCH"])
+@login_required
 def confirmar_transferencia(id):
     """
     Toggle de estado:
@@ -292,6 +306,7 @@ def confirmar_transferencia(id):
 
 
 @app.route("/transferencias/<int:id>", methods=["PUT"])
+@login_required
 def editar_transferencia(id):
     try:
         data = request.get_json()
@@ -302,10 +317,12 @@ def editar_transferencia(id):
 
         # Validaciones básicas
         if monto is not None:
-            monto = float(monto)
-            if monto <= 0:
+            try:
+                monto = float(monto)
+                if monto <= 0:
+                    return jsonify({"error": "Monto inválido"}), 400
+            except:
                 return jsonify({"error": "Monto inválido"}), 400
-
         if fecha:
             try:
                 datetime.strptime(fecha, "%Y-%m-%d")
@@ -352,6 +369,7 @@ def editar_transferencia(id):
 # ------------------------
 
 @app.route("/resumen", methods=["GET"])
+@login_required
 def obtener_resumen():
     """
     Calcula:
@@ -411,6 +429,7 @@ def obtener_resumen():
 
 
 @app.route("/objetivo", methods=["POST"])
+@login_required
 def guardar_objetivo():
     """
     Actualiza el objetivo mensual de una persona.
