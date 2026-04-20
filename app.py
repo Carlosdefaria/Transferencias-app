@@ -283,6 +283,62 @@ def confirmar_transferencia(id):
     return jsonify({"confirmada": nuevo_estado})
 
 
+@app.route("/transferencias/<int:id>", methods=["PUT"])
+def editar_transferencia(id):
+    try:
+        data = request.get_json()
+
+        monto = data.get("monto")
+        fecha = data.get("fecha")
+        descripcion = data.get("descripcion")
+
+        # Validaciones básicas
+        if monto is not None:
+            monto = float(monto)
+            if monto <= 0:
+                return jsonify({"error": "Monto inválido"}), 400
+
+        if fecha:
+            try:
+                datetime.strptime(fecha, "%Y-%m-%d")
+            except:
+                return jsonify({"error": "Fecha inválida"}), 400
+        else:
+            # Si no viene fecha, mantenemos la actual
+            conn = get_db_connection()
+            cursor = conn.cursor()
+
+            cursor.execute(
+                "SELECT fecha FROM transferencias WHERE id = %s", (id,))
+            fecha_actual = cursor.fetchone()[0]
+
+            cursor.close()
+            conn.close()
+
+            fecha = fecha_actual
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            UPDATE transferencias
+            SET monto = %s,
+                fecha = %s,
+                descripcion = %s
+            WHERE id = %s
+        """, (monto, fecha, descripcion, id))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return jsonify({"mensaje": "Transferencia actualizada"})
+
+    except Exception as e:
+        print("ERROR EDITAR:", e)
+        return jsonify({"error": "Error interno"}), 500
+
+
 # ------------------------
 # RESUMEN
 # ------------------------

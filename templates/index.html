@@ -334,6 +334,7 @@
         document.getElementById("texto-progreso").innerText =
             `${formatearDinero(data.total_confirmado)} ${simbolo} / ${formatearDinero(data.objetivo)} ${simbolo}`;
     }
+
 async function cargarTransferencias() {
     const persona = getPersonaSeleccionada();
     const moneda = document.getElementById("moneda").value;
@@ -373,6 +374,10 @@ async function cargarTransferencias() {
                 </div>
 
                 <div class="transferencia-acciones">
+                    <button onclick="editarTransferencia(${t.id})">
+                        Editar
+                    </button>
+
                     <button id="btn-confirmar-${t.id}" onclick="toggleConfirmar(${t.id})">
                         ${t.confirmada ? "Desconfirmar" : "Confirmar"}
                     </button>
@@ -391,6 +396,96 @@ async function cargarTransferencias() {
 
         lista.appendChild(item);
     });
+}
+
+function editarTransferencia(id) {
+    const item = document.getElementById(`transferencia-${id}`);
+
+    const montoTexto = item.querySelector(".transferencia-monto").innerText;
+    const monto = montoTexto.replace(/[^\d,.-]/g, "").replace(",", ".");
+
+    let desc = item.querySelector(".transferencia-desc").innerText;
+
+    if (desc === "Sin descripción") {
+        desc = "";
+    }
+    const fechaTexto = item.querySelector(".transferencia-fecha").innerText;
+
+    // convertir dd/mm/yyyy → yyyy-mm-dd
+    const partes = fechaTexto.split('/');
+    const fecha = `${partes[2]}-${partes[1]}-${partes[0]}`;
+
+    item.innerHTML = `
+        <div class="transferencia editando">
+            
+            <div class="transferencia-info">
+                
+                <div class="linea-principal">
+                    <input type="number" step="0.01" id="edit-monto-${id}" value="${monto}" class="input-edit small">
+                    <input type="date" id="edit-fecha-${id}" value="${fecha}" class="input-edit small">
+                </div>
+
+                <input type="text" id="edit-desc-${id}" value="${desc}" class="input-edit">
+            
+            </div>
+
+            <div class="transferencia-acciones">
+                <button id="btn-guardar-${id}" onclick="guardarEdicion(${id})">
+                    Guardar
+                </button>
+                <button class="secondary" onclick="cargarTransferencias()">Cancelar</button>
+            </div>
+
+        </div>
+    `;
+
+    document.getElementById(`edit-monto-${id}`).focus();
+}
+
+async function guardarEdicion(id) {
+    const btnGuardar = document.getElementById(`btn-guardar-${id}`);
+
+    let monto = document.getElementById(`edit-monto-${id}`).value;
+    const fecha = document.getElementById(`edit-fecha-${id}`).value;
+    const descripcion = document.getElementById(`edit-desc-${id}`).value;
+
+    // 🔹 Normalizar formato europeo (coma → punto)
+    monto = monto.replace(",", ".");
+    monto = parseFloat(monto);
+
+    // 🔹 Validación robusta
+    if (isNaN(monto) || monto <= 0 || !fecha) {
+        mostrarMensaje("Monto y fecha son obligatorios", "error");
+        return;
+    }
+
+    // 🔹 LOADING
+    const textoOriginal = btnGuardar.innerText;
+    btnGuardar.disabled = true;
+    btnGuardar.innerText = "Guardando...";
+
+    try {
+        await apiRequest(`/transferencias/${id}`, {
+            method: "PUT",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                monto: monto,
+                fecha,
+                descripcion
+            })
+        });
+
+        mostrarMensaje("Transferencia actualizada");
+
+        cargarTransferencias();
+        cargarResumen();
+
+    } catch (error) {
+        // ya manejado en apiRequest
+    } finally {
+        btnGuardar.disabled = false;
+        btnGuardar.innerText = textoOriginal;
+    }
 }
 
     async function agregarTransferencia() {

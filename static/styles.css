@@ -63,6 +63,25 @@ select:focus {
     border-color: #2563eb;
 }
 
+.input-edit {
+    width: 100%;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 13px;
+    margin-bottom: 8px;
+}
+
+.input-edit.small {
+    width: auto;
+    max-width: 120px;
+}
+
+.editando {
+    background-color: #fff7ed;
+    border: 1px solid #fdba74;
+}
+
 /* Botones */
 button {
     width: 100%;
