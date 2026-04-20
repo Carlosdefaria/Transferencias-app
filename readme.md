@@ -4,6 +4,12 @@ Aplicación web sencilla para gestionar transferencias de dinero entre dos perso
 
 ---
 
+## Demo
+
+https://tu-app.onrender.com
+
+---
+
 ## Funcionalidades
 
 - Registro de transferencias (monto, fecha, descripción)
@@ -13,7 +19,7 @@ Aplicación web sencilla para gestionar transferencias de dinero entre dos perso
 - Cálculo de dinero pendiente por confirmar
 - Barra de progreso visual
 - Filtro por mes
-- Sistema de backups automáticos de base de datos
+- Soporte multi-moneda (EUR, USD, GBP)
 
 ---
 
@@ -26,24 +32,25 @@ Aplicación web sencilla para gestionar transferencias de dinero entre dos perso
 
 ---
 
-##  Arquitectura
+## Arquitectura
 
 - Aplicación web con backend en Flask
 - Base de datos PostgreSQL en la nube
-- Comunicación vía API REST
-- Backups automáticos mediante script (`backup.py`)
+- API REST para comunicación frontend-backend
+- Lógica de negocio centralizada en el servidor
 
 ---
 
-##  Seguridad
+## Seguridad
 
-- Sistema de login validado en backend
-- Protección básica de acceso mediante PIN
-- Separación entre frontend y backend
+- Sistema de login con validación en backend
+- Autenticación basada en sesión
+- Protección de rutas sensibles
+- Uso de variables de entorno (`SECRET_KEY`, `DATABASE_URL`)
 
 ---
 
-##  ¿Qué problema resuelve?
+## ¿Qué problema resuelve?
 
 Permite llevar un control claro del dinero transferido mes a mes, evitando confusiones sobre:
 
@@ -53,42 +60,46 @@ Permite llevar un control claro del dinero transferido mes a mes, evitando confu
 
 ---
 
-##  Aprendizajes clave
-
-Este proyecto fue desarrollado para aprender:
-
-- Desarrollo backend real con Flask
-- Integración con base de datos PostgreSQL
-- Diseño de una API simple
-- Manejo de estado y lógica de negocio
-- Mejores prácticas de UX/UI básicas
-- Deploy en producción (Render)
-- Automatización de backups
-- Uso de Git y GitHub en proyectos reales
-
----
-
-##  Instalación local
+## Instalación local
 
 ```bash
 git clone https://github.com/Carlosdefaria/Transferencias-app.git
 cd Transferencias-app
 pip install -r requirements.txt
+
+# Configurar variables de entorno (IMPORTANTE)
+export DATABASE_URL=tu_database_url
+export SECRET_KEY=tu_secret_key
+
+# Ejecutar la app
 python app.py
 ```
 
+---
+
+## Aprendizajes clave
+
+Este proyecto fue desarrollado para aprender:
+
+- Desarrollo backend real con Flask
+- Integración con base de datos PostgreSQL
+- Diseño de APIs REST
+- Implementación de lógica de negocio real
+- Mejores prácticas de UX/UI básicas
+- Deploy en producción (Render)
+- Uso de Git y GitHub en proyectos reales
 
 ---
 
-##  Estado del proyecto
+## Estado del proyecto
 
-- Proyecto funcional en producción  
-- En mejora continua
-
+- Versión 1.0 funcional desplegada en producción
+- Lista para uso real
+- Base sólida para futuras mejoras
 
 ---
 
-##  Mejoras futuras
+## Mejoras futuras
 
 - Autenticación con usuarios reales
 - Dashboard con gráficos
