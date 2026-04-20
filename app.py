@@ -6,7 +6,12 @@ from datetime import datetime
 from functools import wraps
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "dev-key")
+
+secret = os.environ.get("SECRET_KEY")
+if not secret:
+    raise Exception("SECRET_KEY no configurada")
+
+app.secret_key = secret
 
 
 # ------------------------
@@ -32,7 +37,7 @@ def convertir_moneda(monto, de="EUR", a="EUR"):
 
     try:
         url = f"https://api.exchangerate-api.com/v4/latest/{de}"
-        response = requests.get(url)
+        response = requests.get(url, timeout=3)
         data = response.json()
 
         tasa = data["rates"].get(a, 1)
@@ -231,7 +236,7 @@ def obtener_transferencias():
         SELECT id, monto, fecha, descripcion, persona, confirmada
         FROM transferencias
         WHERE persona = %s
-        ORDER BY fecha DESC
+        ORDER BY fecha DESC, id DESC
     """, (persona,))
 
     filas = cursor.fetchall()
@@ -456,7 +461,9 @@ def obtener_resumen():
         "SELECT objetivo_total FROM config WHERE persona = %s LIMIT 1",
         (persona,)
     )
-    objetivo = cursor.fetchone()[0]
+
+    row = cursor.fetchone()
+    objetivo = row[0] if row else 0
 
     cursor.close()
     conn.close()
