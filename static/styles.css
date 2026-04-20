@@ -1,6 +1,6 @@
 body {
     font-family: Arial, sans-serif;
-    background-color: #f5f7fa;
+    background-color: #f5f7fb;
     margin: 0;
     padding: 0;
 }
@@ -9,27 +9,30 @@ body {
 .container {
     max-width: 700px;
     margin: 40px auto;
-    padding: 20px;
+    padding: 0 15px;
 }
 
 /* Títulos */
 h1 {
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 25px;
 }
 
 h2 {
-    margin-bottom: 10px;
+    margin-bottom: 12px;
 }
 
-/* Cards (mejoradas) */
+/* Cards */
 .card {
     background: white;
     padding: 20px;
     border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     margin-bottom: 20px;
-    transition: 0.2s ease;
+
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border: 1px solid #eee;
+
+    transition: all 0.2s ease;
 }
 
 .card:hover {
@@ -44,36 +47,70 @@ select {
     padding: 10px;
     margin-top: 8px;
     margin-bottom: 12px;
+
     border-radius: 8px;
     border: 1px solid #ccc;
+
     font-size: 14px;
     box-sizing: border-box;
+
+    transition: border 0.2s ease;
 }
 
-/* Botones (mejorados) */
+input:focus,
+select:focus {
+    outline: none;
+    border-color: #2563eb;
+}
+
+/* Botones */
 button {
     width: 100%;
     padding: 12px;
-    background: #3b82f6;
+    background-color: #2563eb;
     color: white;
+
     border: none;
     border-radius: 8px;
-    font-weight: bold;
+
+    font-weight: 500;
     cursor: pointer;
-    transition: 0.2s;
+
+    transition: all 0.2s ease;
     margin-top: 5px;
 }
 
 button:hover {
-    background: #2563eb;
+    background-color: #1e4fd1;
 }
 
+button:disabled {
+    background-color: #9ca3af;
+    cursor: not-allowed;
+}
+
+/* Botón secundario */
 button.secondary {
-    background-color: #bbb;
+    background-color: #9ca3af;
 }
 
 button.secondary:hover {
-    background-color: #999;
+    background-color: #7c828a;
+}
+
+/* Botón eliminar */
+.btn-eliminar {
+    background-color: #dc2626;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    width: auto;
+    margin-left: 10px;
+    border-radius: 6px;
+}
+
+.btn-eliminar:hover {
+    background-color: #b91c1c;
 }
 
 /* Mensaje */
@@ -93,26 +130,18 @@ li {
     background: #ffffff;
     padding: 12px;
     margin-bottom: 10px;
+
     border-radius: 8px;
     border: 1px solid #e5e7eb;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
+    transition: all 0.2s ease;
+}
+
+li:hover {
+    background-color: #f9fafb;
 }
 
 li span {
     flex: 1;
-}
-
-/* Botón eliminar */
-.btn-eliminar {
-    background-color: red;
-    color: white;
-    border: none;
-    padding: 5px 10px;
-    width: auto;
-    margin-left: 10px;
 }
 
 /* Barra progreso */
@@ -186,13 +215,13 @@ li span {
     text-align: center;
 }
 
+/* Botón swap */
 .swap-btn {
     margin-top: 22px;
     padding: 8px 10px;
     border-radius: 8px;
     border: none;
     background-color: #111;
-    /* negro */
     color: white;
     cursor: pointer;
     font-size: 16px;
@@ -219,4 +248,45 @@ li span {
     margin-top: 5px;
     color: #6b7280;
     font-size: 13px;
+}
+
+.transferencia {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    width: 100%;
+}
+
+.transferencia-info {
+    display: flex;
+    gap: 8x;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.transferencia-monto {
+    font-weight: bold;
+    font-size: 15px;
+}
+
+.transferencia-fecha {
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.transferencia-desc {
+    font-size: 13px;
+    color: #555;
+}
+
+.transferencia button {
+    width: auto;
+    padding: 8px 12px;
+}
+
+.transferencia-acciones {
+    display: flex;
+    gap: 8px;
+    align-items: center;
 }

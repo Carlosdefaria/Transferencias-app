@@ -1,557 +1,570 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Control de Transferencias</title>
-    <link rel="stylesheet" href="/static/styles.css">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body>
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <title>Control de Transferencias</title>
+        <link rel="stylesheet" href="/static/styles.css">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body>
 
-<!-- LOGIN -->
-<div id="login-container" class="login">
-    <h2>Acceso</h2>
-    <input type="password" id="pin" placeholder="Introduce PIN">
-    <button onclick="login()">Entrar</button>
-</div>
+    <!-- LOGIN -->
+    <div id="login-container" class="login">
+        <h2>Acceso</h2>
+        <input type="password" id="pin" placeholder="Introduce PIN">
+        <button onclick="login()">Entrar</button>
+    </div>
 
-<!-- APP -->
-<div id="app" style="display:none;">
+    <!-- APP -->
+    <div id="app" style="display:none;">
 
-<div class="container">
+    <div class="container">
 
-    <h1>Control de Transferencias</h1>
-    <p id="mensaje"></p>
+        <h1>Control de Transferencias</h1>
+        <p id="mensaje"></p>
 
-    <p class="usuario-activo">
-    Estás viendo: <strong id="nombre-usuario">Carlos</strong>
-    </p>
+        <p class="usuario-activo">
+        Estás viendo: <strong id="nombre-usuario">Carlos</strong>
+        </p>
 
-    <div class="card">
-        <h2>Cuenta</h2>
-        <select id="persona" onchange="cambiarPersona()">
-            <option value="Carlos">Carlos</option>
-            <option value="Pito">Pito</option>
+        <div class="card">
+            <h2>Cuenta</h2>
+            <select id="persona" onchange="cambiarPersona()">
+                <option value="Carlos">Carlos</option>
+                <option value="Pito">Pito</option>
+            </select>
+        </div>
+
+        <div class="card">
+        <h2>Moneda</h2>
+
+        <select id="moneda" onchange="cargarResumen()">
+            <option value="EUR">EUR (€)</option>
+            <option value="USD">USD ($)</option>
+            <option value="GBP">GBP (£)</option>
         </select>
-    </div>
-
-    <div class="card">
-    <h2>Moneda</h2>
-
-    <select id="moneda" onchange="cargarResumen()">
-        <option value="EUR">EUR (€)</option>
-        <option value="USD">USD ($)</option>
-        <option value="GBP">GBP (£)</option>
-    </select>
-    </div>
-
-    <div class="card">
-    <h2>Conversor de moneda</h2>
-
-    <input type="number" id="cantidad" placeholder="Cantidad a convertir" step="any">
-
-    <div class="conversor-row">
-        <div class="campo">
-            <label>De</label>
-            <select id="de">
-                <option value="EUR">EUR</option>
-                <option value="USD">USD</option>
-                <option value="GBP">GBP</option>
-            </select>
         </div>
 
-        <button class="swap-btn" onclick="invertirMonedas()">⇄</button>
+        <div class="card">
+        <h2>Conversor de moneda</h2>
 
-        <div class="campo">
-            <label>A</label>
-            <select id="a">
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-                <option value="GBP">GBP</option>
-            </select>
+        <input type="number" id="cantidad" placeholder="Cantidad a convertir" step="any">
+
+        <div class="conversor-row">
+            <div class="campo">
+                <label>De</label>
+                <select id="de">
+                    <option value="EUR">EUR</option>
+                    <option value="USD">USD</option>
+                    <option value="GBP">GBP</option>
+                </select>
+            </div>
+
+            <button class="swap-btn" onclick="invertirMonedas()">⇄</button>
+
+            <div class="campo">
+                <label>A</label>
+                <select id="a">
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                    <option value="GBP">GBP</option>
+                </select>
+            </div>
         </div>
+
+        <button onclick="convertirMoneda()" style="margin-top:15px;">
+            Convertir
+        </button>
+
+        <p id="resultado-conversion"></p>
+        <small id="tasa-info"></small>
     </div>
 
-    <button onclick="convertirMoneda()" style="margin-top:15px;">
-        Convertir
-    </button>
-
-    <p id="resultado-conversion"></p>
-    <small id="tasa-info"></small>
-</div>
-
-    <div class="card">
-        <h2>Filtrar por mes</h2>
-        <input type="month" id="filtro-mes">
-        <button onclick="aplicarFiltro()">Aplicar filtro</button>
-        <button class="secondary" onclick="limpiarFiltro()">Mes actual</button>
-    </div>
-
-    <div class="card">
-        <h2>Resumen</h2>
-        <p>Objetivo a alcanzar: <span id="objetivo">0</span> €</p>
-        <p>Total confirmado: <span id="confirmado">0</span> €</p>
-        <p>Restante para llegar al objetivo: <span id="restante">0</span> €</p>
-        <p>Transferencias hechas aún no recibidas: <span id="pendiente">0</span> €</p>
-    
-        <h3>Progreso</h3>
-        <div id="barra-container">
-            <div id="barra-progreso"></div>
+        <div class="card">
+            <h2>Filtrar por mes</h2>
+            <input type="month" id="filtro-mes">
+            <button onclick="aplicarFiltro()">Aplicar filtro</button>
+            <button class="secondary" onclick="limpiarFiltro()">Mes actual</button>
         </div>
-        <p id="texto-progreso"></p>
+
+        <div class="card">
+            <h2>Resumen</h2>
+            <p>Objetivo a alcanzar: <span id="objetivo">0</span> €</p>
+            <p>Total confirmado: <span id="confirmado">0</span> €</p>
+            <p>Restante para llegar al objetivo: <span id="restante">0</span> €</p>
+            <p>Transferencias hechas aún no recibidas: <span id="pendiente">0</span> €</p>
+        
+            <h3>Progreso</h3>
+            <div id="barra-container">
+                <div id="barra-progreso"></div>
+            </div>
+            <p id="texto-progreso"></p>
+        </div>
+        
+
+
+        <div class="card">
+            <h2>Actualizar objetivo</h2>
+
+            <input type="number" id="nuevo-objetivo" placeholder="Nuevo objetivo">
+            <button id="btn-objetivo" onclick="guardarObjetivo()">Guardar objetivo</button>
+        </div>
+
+
+        
+        <div class="card">
+            <h2>Agregar transferencia</h2>
+            <input type="number" id="monto" placeholder="Monto">
+            <input type="date" id="fecha">
+            <input type="text" id="descripcion" placeholder="Descripción">
+            <button id="btn-agregar" onclick="agregarTransferencia()">Agregar</button>
+        </div>
+
+        <div class="card">
+            <h2>Historial</h2>
+            <ul id="lista-transferencias"></ul>
+        </div>
+
     </div>
-    
-
-
-    <div class="card">
-        <h2>Actualizar objetivo</h2>
-
-        <input type="number" id="nuevo-objetivo" placeholder="Nuevo objetivo">
-        <button id="btn-objetivo" onclick="guardarObjetivo()">Guardar objetivo</button>
     </div>
 
+    <script>
 
-    
-    <div class="card">
-        <h2>Agregar transferencia</h2>
-        <input type="number" id="monto" placeholder="Monto">
-        <input type="date" id="fecha">
-        <input type="text" id="descripcion" placeholder="Descripción">
-        <button id="btn-agregar" onclick="agregarTransferencia()">Agregar</button>
-    </div>
+    async function apiRequest(url, options = {}) {
+        try {
+            const res = await fetch(url, options);
 
-    <div class="card">
-        <h2>Historial</h2>
-        <ul id="lista-transferencias"></ul>
-    </div>
+            let data = null;
 
-</div>
-</div>
+            try {
+                data = await res.json();
+            } catch {
+                // respuesta vacía (ej: DELETE)
+            }
 
-<script>
+            if (!res.ok) {
+                throw new Error(data?.error || "Error en la petición");
+            }
 
-async function apiRequest(url, options = {}) {
-    try {
-        const res = await fetch(url, options);
+            return data;
 
-        let data = null;
+        } catch (error) {
+            mostrarMensaje(error.message, "error");
+            throw error;
+        }
+    }
+
+    async function convertirMoneda() {
+        const cantidad = parseFloat(document.getElementById("cantidad").value);
+        const de = document.getElementById("de").value;
+        const a = document.getElementById("a").value;
+        const resultadoElem = document.getElementById("resultado-conversion");
+
+        if (isNaN(cantidad) || cantidad <= 0) {
+            mostrarMensaje("Introduce una cantidad válida", "error");
+            return;
+        }
+
+        if (de === a) {
+            resultadoElem.innerText =
+                `${cantidad} ${de} → ${cantidad.toFixed(2)} ${a}`;
+            return;
+        }
 
         try {
-            data = await res.json();
-        } catch {
-            // respuesta vacía (ej: DELETE)
+            resultadoElem.innerText = "Calculando...";
+
+            const response = await fetch(`https://api.exchangerate-api.com/v4/latest/${de}`);
+            const data = await response.json();
+
+            const tasa = data.rates[a];
+            const resultado = cantidad * tasa;
+
+            const resultadoFormateado = new Intl.NumberFormat('es-ES', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(resultado);
+
+            resultadoElem.innerText =
+                `${cantidad} ${de} → ${resultadoFormateado} ${a}`;
+
+            document.getElementById("tasa-info").innerText =
+                `1 ${de} = ${tasa.toFixed(4)} ${a}`;
+
+        } catch (error) {
+            resultadoElem.innerText = "Error al obtener tasa de cambio";
         }
+    }
 
-        if (!res.ok) {
-            throw new Error(data?.error || "Error en la petición");
+    function obtenerSimbolo(moneda) {
+        if (moneda === "EUR") return "€";
+        if (moneda === "USD") return "$";
+        if (moneda === "GBP") return "£";
+        return "";
+    }
+
+    function invertirMonedas() {
+        const de = document.getElementById("de");
+        const a = document.getElementById("a");
+
+        const temp = de.value;
+        de.value = a.value;
+        a.value = temp;
+    }
+
+    async function login() {
+        const pin = document.getElementById("pin").value;
+
+        const response = await fetch("/login", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ pin })
+        });
+
+        if (response.ok) {
+            document.getElementById("login-container").style.display = "none";
+            document.getElementById("app").style.display = "block";
+        } else {
+            alert("PIN incorrecto");
         }
-
-        return data;
-
-    } catch (error) {
-        mostrarMensaje(error.message, "error");
-        throw error;
-    }
-}
-
-async function convertirMoneda() {
-    const cantidad = parseFloat(document.getElementById("cantidad").value);
-    const de = document.getElementById("de").value;
-    const a = document.getElementById("a").value;
-    const resultadoElem = document.getElementById("resultado-conversion");
-
-    if (isNaN(cantidad) || cantidad <= 0) {
-        mostrarMensaje("Introduce una cantidad válida", "error");
-        return;
     }
 
-    if (de === a) {
-        resultadoElem.innerText =
-            `${cantidad} ${de} → ${cantidad.toFixed(2)} ${a}`;
-        return;
+    function mostrarMensaje(texto, tipo = "exito") {
+        const mensaje = document.getElementById("mensaje");
+
+        mensaje.className = `mensaje ${tipo}`;
+        mensaje.innerText = texto;
+
+        setTimeout(() => {
+            mensaje.innerText = "";
+            mensaje.className = "";
+        }, 4000);
     }
 
-    try {
-        resultadoElem.innerText = "Calculando...";
-
-        const response = await fetch(`https://api.exchangerate-api.com/v4/latest/${de}`);
-        const data = await response.json();
-
-        const tasa = data.rates[a];
-        const resultado = cantidad * tasa;
-
-        const resultadoFormateado = new Intl.NumberFormat('es-ES', {
+    function formatearDinero(valor) {
+        return new Intl.NumberFormat('es-ES', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
-        }).format(resultado);
-
-        resultadoElem.innerText =
-            `${cantidad} ${de} → ${resultadoFormateado} ${a}`;
-
-        document.getElementById("tasa-info").innerText =
-            `1 ${de} = ${tasa.toFixed(4)} ${a}`;
-
-    } catch (error) {
-        resultadoElem.innerText = "Error al obtener tasa de cambio";
-    }
-}
-
-function obtenerSimbolo(moneda) {
-    if (moneda === "EUR") return "€";
-    if (moneda === "USD") return "$";
-    if (moneda === "GBP") return "£";
-    return "";
-}
-
-function invertirMonedas() {
-    const de = document.getElementById("de");
-    const a = document.getElementById("a");
-
-    const temp = de.value;
-    de.value = a.value;
-    a.value = temp;
-}
-
-async function login() {
-    const pin = document.getElementById("pin").value;
-
-    const response = await fetch("/login", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ pin })
-    });
-
-    if (response.ok) {
-        document.getElementById("login-container").style.display = "none";
-        document.getElementById("app").style.display = "block";
-    } else {
-        alert("PIN incorrecto");
-    }
-}
-
-function mostrarMensaje(texto, tipo = "exito") {
-    const mensaje = document.getElementById("mensaje");
-
-    mensaje.className = `mensaje ${tipo}`;
-    mensaje.innerText = texto;
-
-    setTimeout(() => {
-        mensaje.innerText = "";
-        mensaje.className = "";
-    }, 4000);
-}
-
-function formatearDinero(valor) {
-    return new Intl.NumberFormat('es-ES', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    }).format(valor || 0);
-}
-
-function getPersonaSeleccionada() {
-    return document.getElementById("persona").value;
-}
-
-let personaSeleccionada = "Carlos";
-
-function cambiarPersona() {
-    const select = document.getElementById("persona");
-    personaSeleccionada = select.value;
-
-    document.getElementById("nombre-usuario").innerText = personaSeleccionada;
-
-    cargarResumen();
-    cargarTransferencias();
-}
-
-function ponerFechaHoy() {
-    const hoy = new Date();
-
-    const year = hoy.getFullYear();
-    const month = String(hoy.getMonth() + 1).padStart(2, '0');
-    const day = String(hoy.getDate()).padStart(2, '0');
-
-    document.getElementById("fecha").value = `${year}-${month}-${day}`;
-}
-
-let mesSeleccionado = null;
-
-function aplicarFiltro() {
-    const input = document.getElementById("filtro-mes").value;
-    if (!input) return;
-
-    mesSeleccionado = input;
-    cargarResumen();
-    cargarTransferencias();
-}
-
-function limpiarFiltro() {
-    mesSeleccionado = null;
-    document.getElementById("filtro-mes").value = "";
-    cargarResumen();
-    cargarTransferencias();
-}
-
-async function cargarResumen() {
-    let persona = getPersonaSeleccionada();
-    let moneda = document.getElementById("moneda").value;
-    let simbolo = obtenerSimbolo(moneda);
-
-    let url = `/resumen?persona=${persona}&moneda=${moneda}`;
-
-    if (mesSeleccionado) {
-        url += `&mes=${mesSeleccionado}`;
+        }).format(valor || 0);
     }
 
-    const data = await apiRequest(url);
-
-    document.getElementById("confirmado").innerText = formatearDinero(data.total_confirmado) + " " + simbolo;
-    document.getElementById("objetivo").innerText = formatearDinero(data.objetivo) + " " + simbolo;
-    document.getElementById("restante").innerText = formatearDinero(data.restante) + " " + simbolo;
-    document.getElementById("pendiente").innerText = formatearDinero(data.pendiente) + " " + simbolo;
-
-    const restanteElem = document.getElementById("restante");
-    restanteElem.style.color = data.restante <= 0 ? "green" : "red";
-    document.getElementById("pendiente").style.color = "orange";
-
-    let porcentaje = data.objetivo > 0 
-        ? (data.total_confirmado / data.objetivo) * 100 
-        : 0;
-
-    if (porcentaje > 100) porcentaje = 100;
-
-    const barra = document.getElementById("barra-progreso");
-    barra.style.width = porcentaje + "%";
-
-    if (porcentaje < 40) {
-        barra.style.backgroundColor = "red";
-    } else if (porcentaje < 80) {
-        barra.style.backgroundColor = "orange";
-    } else {
-        barra.style.backgroundColor = "green";
+    function getPersonaSeleccionada() {
+        return document.getElementById("persona").value;
     }
 
-    document.getElementById("texto-progreso").innerText =
-        `${formatearDinero(data.total_confirmado)} ${simbolo} / ${formatearDinero(data.objetivo)} ${simbolo}`;
-}
+    let personaSeleccionada = "Carlos";
 
-async function cargarTransferencias() {
-    const persona = getPersonaSeleccionada();
-    const moneda = document.getElementById("moneda").value;
-    const simbolo = obtenerSimbolo(moneda);
+    function cambiarPersona() {
+        const select = document.getElementById("persona");
+        personaSeleccionada = select.value;
 
-    const respuesta = await fetch(`/transferencias?persona=${persona}&moneda=${moneda}`);
-    const data = await respuesta.json();
+        document.getElementById("nombre-usuario").innerText = personaSeleccionada;
 
-    const lista = document.getElementById("lista-transferencias");
-    lista.innerHTML = "";
-
-    data.forEach(t => {
-        if (mesSeleccionado && !t.fecha.startsWith(mesSeleccionado)) return;
-
-        const item = document.createElement("li");
-        item.id = `transferencia-${t.id}`;
-        item.dataset.confirmada = t.confirmada;
-
-        const fecha = new Date(t.fecha).toLocaleDateString("es-ES");
-
-        item.innerHTML = `
-            <span>
-                <strong>${formatearDinero(t.monto)} ${simbolo}</strong> — ${fecha}<br>
-                <small>${t.descripcion || "Sin descripción"}</small>
-            </span>
-
-            <div style="display:flex; gap:5px;">
-                <button id="btn-confirmar-${t.id}" onclick="toggleConfirmar(${t.id})">
-                    ${t.confirmada ? "Desconfirmar" : "Confirmar"}
-                </button>
-
-                ${!t.confirmada ? `
-                    <button id="btn-eliminar-${t.id}" class="btn-eliminar" onclick="eliminarTransferencia(${t.id})">X</button>
-                ` : ""}
-            </div>
-        `;
-
-        if (t.confirmada) {
-            item.style.backgroundColor = "#d4edda";
-        }
-
-        lista.appendChild(item);
-    });
-}
-
-async function agregarTransferencia() {
-    const btn = document.getElementById("btn-agregar");
-
-    const monto = document.getElementById("monto").value;
-    const fecha = document.getElementById("fecha").value;
-    const descripcion = document.getElementById("descripcion").value;
-
-    if (!monto || !fecha) {
-        mostrarMensaje("Monto y fecha son obligatorios", "error");
-        return;
-    }
-
-    // 🔹 ACTIVAR LOADING
-    btn.disabled = true;
-    const textoOriginal = btn.innerText;
-    btn.innerText = "Guardando...";
-
-    try {
-        await apiRequest("/transferencias", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({
-                monto: parseFloat(monto),
-                fecha,
-                descripcion,
-                persona: getPersonaSeleccionada()
-            })
-        });
-
-        mostrarMensaje("Transferencia agregada correctamente");
-
-        // limpiar inputs
-        document.getElementById("monto").value = "";
-        ponerFechaHoy();
-        document.getElementById("descripcion").value = "";
-        document.getElementById("monto").focus();
-
-        // reset filtro
-        mesSeleccionado = null;
-        document.getElementById("filtro-mes").value = "";
-
-        // recargar datos
         cargarResumen();
         cargarTransferencias();
-
-    } catch (error) {
-        // ya manejado
-    } finally {
-        // 🔹 DESACTIVAR LOADING (SIEMPRE)
-        btn.disabled = false;
-        btn.innerText = textoOriginal;
     }
-}
 
-async function eliminarTransferencia(id) {
-    const btn = document.getElementById(`btn-eliminar-${id}`);
+    function ponerFechaHoy() {
+        const hoy = new Date();
 
-    if (!confirm("¿Eliminar esta transferencia?")) return;
+        const year = hoy.getFullYear();
+        const month = String(hoy.getMonth() + 1).padStart(2, '0');
+        const day = String(hoy.getDate()).padStart(2, '0');
 
-    // 🔹 loading
-    btn.disabled = true;
-    btn.innerText = "...";
+        document.getElementById("fecha").value = `${year}-${month}-${day}`;
+    }
 
-    try {
-        await apiRequest(`/transferencias/${id}`, {
-            method: "DELETE"
-        });
+    let mesSeleccionado = null;
 
-        mostrarMensaje("Transferencia eliminada");
+    function aplicarFiltro() {
+        const input = document.getElementById("filtro-mes").value;
+        if (!input) return;
 
-        const elemento = document.getElementById(`transferencia-${id}`);
-        if (elemento) elemento.remove();
-
+        mesSeleccionado = input;
         cargarResumen();
-
-    } catch (error) {
-        btn.disabled = false;
-        btn.innerText = "X";
+        cargarTransferencias();
     }
-}
 
-async function toggleConfirmar(id) {
-    const btn = document.getElementById(`btn-confirmar-${id}`);
-    const textoOriginal = btn.innerText;
+    function limpiarFiltro() {
+        mesSeleccionado = null;
+        document.getElementById("filtro-mes").value = "";
+        cargarResumen();
+        cargarTransferencias();
+    }
 
-    // 🔹 activar loading
-    btn.disabled = true;
-    btn.innerText = "Procesando...";
+    async function cargarResumen() {
+        let persona = getPersonaSeleccionada();
+        let moneda = document.getElementById("moneda").value;
+        let simbolo = obtenerSimbolo(moneda);
 
-    try {
-        await apiRequest(`/transferencias/${id}/confirmar`, {
-            method: "PATCH"
-        });
+        let url = `/resumen?persona=${persona}&moneda=${moneda}`;
 
-        const item = document.getElementById(`transferencia-${id}`);
-        const btnEliminar = document.getElementById(`btn-eliminar-${id}`);
-
-        const estaConfirmada = item.dataset.confirmada === "true";
-
-        if (estaConfirmada) {
-            item.style.backgroundColor = "";
-            btn.innerText = "Confirmar";
-            item.dataset.confirmada = "false";
-
-            if (btnEliminar) {
-                btnEliminar.style.display = "inline-block";
-            }
-
-        } else {
-            item.style.backgroundColor = "#d4edda";
-            btn.innerText = "Desconfirmar";
-            item.dataset.confirmada = "true";
-
-            if (btnEliminar) {
-                btnEliminar.style.display = "none";
-            }
+        if (mesSeleccionado) {
+            url += `&mes=${mesSeleccionado}`;
         }
 
-        cargarResumen();
+        const data = await apiRequest(url);
 
-    } catch (error) {
-        // ya manejado
-    } finally {
-        // 🔹 desactivar loading (pero ojo con el texto)
-        btn.disabled = false;
+        document.getElementById("confirmado").innerText = formatearDinero(data.total_confirmado) + " " + simbolo;
+        document.getElementById("objetivo").innerText = formatearDinero(data.objetivo) + " " + simbolo;
+        document.getElementById("restante").innerText = formatearDinero(data.restante) + " " + simbolo;
+        document.getElementById("pendiente").innerText = formatearDinero(data.pendiente) + " " + simbolo;
+
+        const restanteElem = document.getElementById("restante");
+        restanteElem.style.color = data.restante <= 0 ? "green" : "red";
+        document.getElementById("pendiente").style.color = "orange";
+
+        let porcentaje = data.objetivo > 0 
+            ? (data.total_confirmado / data.objetivo) * 100 
+            : 0;
+
+        if (porcentaje > 100) porcentaje = 100;
+
+        const barra = document.getElementById("barra-progreso");
+        barra.style.width = porcentaje + "%";
+
+        if (porcentaje < 40) {
+            barra.style.backgroundColor = "red";
+        } else if (porcentaje < 80) {
+            barra.style.backgroundColor = "orange";
+        } else {
+            barra.style.backgroundColor = "green";
+        }
+
+        document.getElementById("texto-progreso").innerText =
+            `${formatearDinero(data.total_confirmado)} ${simbolo} / ${formatearDinero(data.objetivo)} ${simbolo}`;
     }
-}
 
-async function guardarObjetivo() {
-    const btn = document.getElementById("btn-objetivo");
+    async function cargarTransferencias() {
+        const persona = getPersonaSeleccionada();
+        const moneda = document.getElementById("moneda").value;
+        const simbolo = obtenerSimbolo(moneda);
 
-    const objetivo = document.getElementById("nuevo-objetivo").value;
+        const respuesta = await fetch(`/transferencias?persona=${persona}&moneda=${moneda}`);
+        const data = await respuesta.json();
 
-    if (!objetivo || objetivo <= 0) {
-        mostrarMensaje("Objetivo inválido", "error");
-        return;
-    }
+        const lista = document.getElementById("lista-transferencias");
+        lista.innerHTML = "";
 
-    // 🔹 activar loading
-    const textoOriginal = btn.innerText;
-    btn.disabled = true;
-    btn.innerText = "Guardando...";
+        data.forEach(t => {
+            if (mesSeleccionado && !t.fecha.startsWith(mesSeleccionado)) return;
 
-    try {
-        await apiRequest("/objetivo", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({
-                objetivo: parseFloat(objetivo),
-                persona: getPersonaSeleccionada()
-            })
+            const item = document.createElement("li");
+            item.id = `transferencia-${t.id}`;
+            item.dataset.confirmada = t.confirmada;
+
+            const fecha = new Date(t.fecha).toLocaleDateString("es-ES");
+
+            item.innerHTML = `
+                <div class="transferencia">
+                    
+                    <div class="transferencia-info">
+                        <span class="transferencia-monto">
+                            ${formatearDinero(t.monto)} ${simbolo}
+                        </span>
+
+                        <span class="transferencia-fecha">
+                            ${fecha}
+                        </span>
+
+                        <span class="transferencia-desc">
+                            ${t.descripcion || "Sin descripción"}
+                        </span>
+                    </div>
+
+                    <div class="transferencia-acciones">
+                        <button id="btn-confirmar-${t.id}" onclick="toggleConfirmar(${t.id})">
+                            ${t.confirmada ? "Desconfirmar" : "Confirmar"}
+                        </button>
+
+                        ${!t.confirmada ? `
+                            <button id="btn-eliminar-${t.id}" class="btn-eliminar" onclick="eliminarTransferencia(${t.id})">X</button>
+                        ` : ""}
+                    </div>
+
+                </div>
+            `;
+
+            if (t.confirmada) {
+                item.style.backgroundColor = "#d4edda";
+            }
+
+            lista.appendChild(item);
         });
-
-        mostrarMensaje("Objetivo actualizado");
-
-        document.getElementById("nuevo-objetivo").value = "";
-        cargarResumen();
-
-    } catch (error) {
-        // ya manejado por apiRequest
-    } finally {
-        // 🔹 desactivar loading
-        btn.disabled = false;
-        btn.innerText = textoOriginal;
     }
-}
 
-cargarResumen();
-cargarTransferencias();
-ponerFechaHoy();
+    async function agregarTransferencia() {
+        const btn = document.getElementById("btn-agregar");
 
-</script>
+        const monto = document.getElementById("monto").value;
+        const fecha = document.getElementById("fecha").value;
+        const descripcion = document.getElementById("descripcion").value;
 
-</body>
-</html>
+        if (!monto || !fecha) {
+            mostrarMensaje("Monto y fecha son obligatorios", "error");
+            return;
+        }
+
+        // 🔹 ACTIVAR LOADING
+        btn.disabled = true;
+        const textoOriginal = btn.innerText;
+        btn.innerText = "Guardando...";
+
+        try {
+            await apiRequest("/transferencias", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({
+                    monto: parseFloat(monto),
+                    fecha,
+                    descripcion,
+                    persona: getPersonaSeleccionada()
+                })
+            });
+
+            mostrarMensaje("Transferencia agregada correctamente");
+
+            // limpiar inputs
+            document.getElementById("monto").value = "";
+            ponerFechaHoy();
+            document.getElementById("descripcion").value = "";
+            document.getElementById("monto").focus();
+
+            // reset filtro
+            mesSeleccionado = null;
+            document.getElementById("filtro-mes").value = "";
+
+            // recargar datos
+            cargarResumen();
+            cargarTransferencias();
+
+        } catch (error) {
+            // ya manejado
+        } finally {
+            // 🔹 DESACTIVAR LOADING (SIEMPRE)
+            btn.disabled = false;
+            btn.innerText = textoOriginal;
+        }
+    }
+
+    async function eliminarTransferencia(id) {
+        const btn = document.getElementById(`btn-eliminar-${id}`);
+
+        if (!confirm("¿Eliminar esta transferencia?")) return;
+
+        // 🔹 loading
+        btn.disabled = true;
+        btn.innerText = "...";
+
+        try {
+            await apiRequest(`/transferencias/${id}`, {
+                method: "DELETE"
+            });
+
+            mostrarMensaje("Transferencia eliminada");
+
+            const elemento = document.getElementById(`transferencia-${id}`);
+            if (elemento) elemento.remove();
+
+            cargarResumen();
+
+        } catch (error) {
+            btn.disabled = false;
+            btn.innerText = "X";
+        }
+    }
+
+    async function toggleConfirmar(id) {
+        const btn = document.getElementById(`btn-confirmar-${id}`);
+        const textoOriginal = btn.innerText;
+
+        // 🔹 activar loading
+        btn.disabled = true;
+        btn.innerText = "Procesando...";
+
+        try {
+            await apiRequest(`/transferencias/${id}/confirmar`, {
+                method: "PATCH"
+            });
+
+            const item = document.getElementById(`transferencia-${id}`);
+            const btnEliminar = document.getElementById(`btn-eliminar-${id}`);
+
+            const estaConfirmada = item.dataset.confirmada === "true";
+
+            if (estaConfirmada) {
+                item.style.backgroundColor = "";
+                btn.innerText = "Confirmar";
+                item.dataset.confirmada = "false";
+
+                if (btnEliminar) {
+                    btnEliminar.style.display = "inline-block";
+                }
+
+            } else {
+                item.style.backgroundColor = "#d4edda";
+                btn.innerText = "Desconfirmar";
+                item.dataset.confirmada = "true";
+
+                if (btnEliminar) {
+                    btnEliminar.style.display = "none";
+                }
+            }
+
+            cargarResumen();
+
+        } catch (error) {
+            // ya manejado
+        finally {
+            btn.disabled = false;
+            btn.innerText = textoOriginal;
+        }
+    }
+
+    async function guardarObjetivo() {
+        const btn = document.getElementById("btn-objetivo");
+
+        const objetivo = document.getElementById("nuevo-objetivo").value;
+
+        if (!objetivo || objetivo <= 0) {
+            mostrarMensaje("Objetivo inválido", "error");
+            return;
+        }
+
+        // 🔹 activar loading
+        const textoOriginal = btn.innerText;
+        btn.disabled = true;
+        btn.innerText = "Guardando...";
+
+        try {
+            await apiRequest("/objetivo", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({
+                    objetivo: parseFloat(objetivo),
+                    persona: getPersonaSeleccionada()
+                })
+            });
+
+            mostrarMensaje("Objetivo actualizado");
+
+            document.getElementById("nuevo-objetivo").value = "";
+            cargarResumen();
+
+        } catch (error) {
+            // ya manejado por apiRequest
+        } finally {
+            // 🔹 desactivar loading
+            btn.disabled = false;
+            btn.innerText = textoOriginal;
+        }
+    }
+
+    cargarResumen();
+    cargarTransferencias();
+    ponerFechaHoy();
+
+    </script>
+
+    </body>
+    </html>

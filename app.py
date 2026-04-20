@@ -21,8 +21,9 @@ def convertir_moneda(monto, de="EUR", a="EUR"):
         tasa = data["rates"].get(a, 1)
         return monto * tasa
 
-    except:
-        return monto  # fallback
+    except Exception as e:
+        print("ERROR CONVERSION:", e)
+        return monto
 
 
 def get_db_connection():
@@ -137,8 +138,6 @@ def crear_transferencia():
         datetime.strptime(fecha, "%Y-%m-%d").date()
     except:
         return jsonify({"error": "Fecha inválida"}), 400
-
-    descripcion = data.get("descripcion")
 
     if fecha is None:
         return jsonify({"error": "Faltan datos"}), 400
