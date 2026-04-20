@@ -27,6 +27,10 @@
         Estás viendo: <strong id="nombre-usuario">Carlos</strong>
         </p>
 
+        <button onclick="logout()" class="secondary" style="margin-bottom:20px;">
+            Cerrar sesión
+        </button>
+
         <div class="card">
             <h2>Cuenta</h2>
             <select id="persona" onchange="cambiarPersona()">
@@ -129,6 +133,22 @@
     </div>
 
     <script>
+
+        async function logout() {
+    try {
+        await apiRequest("/logout", {
+            method: "POST",
+            credentials: "include"
+        });
+
+        // Volver a login
+        document.getElementById("app").style.display = "none";
+        document.getElementById("login-container").style.display = "block";
+
+    } catch (error) {
+        // ya manejado
+    }
+}
 
 async function apiRequest(url, options = {}) {
     try {

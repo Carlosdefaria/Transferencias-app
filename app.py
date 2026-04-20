@@ -150,6 +150,12 @@ def check_auth():
     return jsonify({"auth": False}), 401
 
 
+@app.route("/logout", methods=["POST"])
+def logout():
+    session.clear()
+    return jsonify({"ok": True})
+
+
 # ------------------------
 # TRANSFERENCIAS
 # ------------------------
