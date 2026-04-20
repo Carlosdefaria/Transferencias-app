@@ -250,24 +250,28 @@ li span {
     font-size: 13px;
 }
 
+.linea-principal {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+}
+
 .transferencia {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 15px;
-    width: 100%;
 }
 
 .transferencia-info {
     display: flex;
-    gap: 8x;
-    align-items: center;
-    flex-shrink: 0;
+    flex-direction: column;
 }
 
 .transferencia-monto {
     font-weight: bold;
     font-size: 15px;
+    white-space: nowrap;
 }
 
 .transferencia-fecha {
@@ -278,6 +282,7 @@ li span {
 .transferencia-desc {
     font-size: 13px;
     color: #555;
+    margin-top: 6px;
 }
 
 .transferencia button {

@@ -359,13 +359,14 @@
                 <div class="transferencia">
                     
                     <div class="transferencia-info">
-                        <span class="transferencia-monto">
-                            ${formatearDinero(t.monto)} ${simbolo}
-                        </span>
-
-                        <span class="transferencia-fecha">
-                            ${fecha}
-                        </span>
+                        <div class="linea-principal">
+                            <span class="transferencia-monto">
+                                ${formatearDinero(t.monto)}${simbolo}
+                            </span>
+                            <span class="transferencia-fecha">
+                                ${fecha}
+                            </span>
+                        </div>
 
                         <span class="transferencia-desc">
                             ${t.descripcion || "Sin descripción"}
@@ -474,53 +475,52 @@
         }
     }
 
-    async function toggleConfirmar(id) {
-        const btn = document.getElementById(`btn-confirmar-${id}`);
-        const textoOriginal = btn.innerText;
+async function toggleConfirmar(id) {
+    const btn = document.getElementById(`btn-confirmar-${id}`);
+    const textoOriginal = btn.innerText;
 
-        // 🔹 activar loading
-        btn.disabled = true;
-        btn.innerText = "Procesando...";
+    // 🔹 activar loading
+    btn.disabled = true;
+    btn.innerText = "Procesando...";
 
-        try {
-            await apiRequest(`/transferencias/${id}/confirmar`, {
-                method: "PATCH"
-            });
+    try {
+        await apiRequest(`/transferencias/${id}/confirmar`, {
+            method: "PATCH"
+        });
 
-            const item = document.getElementById(`transferencia-${id}`);
-            const btnEliminar = document.getElementById(`btn-eliminar-${id}`);
+        const item = document.getElementById(`transferencia-${id}`);
+        const btnEliminar = document.getElementById(`btn-eliminar-${id}`);
 
-            const estaConfirmada = item.dataset.confirmada === "true";
+        const estaConfirmada = item.dataset.confirmada === "true";
 
-            if (estaConfirmada) {
-                item.style.backgroundColor = "";
-                btn.innerText = "Confirmar";
-                item.dataset.confirmada = "false";
+        if (estaConfirmada) {
+            item.style.backgroundColor = "";
+            btn.innerText = "Confirmar";
+            item.dataset.confirmada = "false";
 
-                if (btnEliminar) {
-                    btnEliminar.style.display = "inline-block";
-                }
-
-            } else {
-                item.style.backgroundColor = "#d4edda";
-                btn.innerText = "Desconfirmar";
-                item.dataset.confirmada = "true";
-
-                if (btnEliminar) {
-                    btnEliminar.style.display = "none";
-                }
+            if (btnEliminar) {
+                btnEliminar.style.display = "inline-block";
             }
 
-            cargarResumen();
+        } else {
+            item.style.backgroundColor = "#d4edda";
+            btn.innerText = "Desconfirmar";
+            item.dataset.confirmada = "true";
 
-        } catch (error) {
-            // ya manejado
-        finally {
-            btn.disabled = false;
-            btn.innerText = textoOriginal;
+            if (btnEliminar) {
+                btnEliminar.style.display = "none";
+            }
         }
-    }
 
+        cargarResumen();
+
+    } catch (error) {
+        // ya manejado
+    } finally {
+        btn.disabled = false;
+        btn.innerText = textoOriginal;
+    }
+}
     async function guardarObjetivo() {
         const btn = document.getElementById("btn-objetivo");
 
