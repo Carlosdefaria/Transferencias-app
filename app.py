@@ -1,10 +1,11 @@
 import os
 import psycopg
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, session
 import requests
 from datetime import datetime
 
 app = Flask(__name__)
+app.secret_key = "clave-super-secreta"
 
 
 # ------------------------
@@ -120,16 +121,23 @@ def home():
 
 @app.route("/login", methods=["POST"])
 def login():
-    """
-    Login básico por PIN.
-    """
     data = request.get_json()
     pin = data.get("pin")
 
-    if pin == "1234":
-        return jsonify({"ok": True})
+    PIN_CORRECTO = "1234"
 
-    return jsonify({"ok": False}), 401
+    if pin == PIN_CORRECTO:
+        session["auth"] = True
+        return jsonify({"ok": True})
+    else:
+        return jsonify({"ok": False}), 401
+
+
+@app.route("/check-auth", methods=["GET"])
+def check_auth():
+    if session.get("auth"):
+        return jsonify({"auth": True})
+    return jsonify({"auth": False}), 401
 
 
 # ------------------------

@@ -130,29 +130,30 @@
 
     <script>
 
-    async function apiRequest(url, options = {}) {
+async function apiRequest(url, options = {}) {
+    try {
+        const res = await fetch(url, {
+            credentials: "include",
+            ...options
+        });
+
+        let data = null;
+
         try {
-            const res = await fetch(url, options);
+            data = await res.json();
+        } catch {}
 
-            let data = null;
-
-            try {
-                data = await res.json();
-            } catch {
-                // respuesta vacía (ej: DELETE)
-            }
-
-            if (!res.ok) {
-                throw new Error(data?.error || "Error en la petición");
-            }
-
-            return data;
-
-        } catch (error) {
-            mostrarMensaje(error.message, "error");
-            throw error;
+        if (!res.ok) {
+            throw new Error(data?.error || "Error en la petición");
         }
+
+        return data;
+
+    } catch (error) {
+        mostrarMensaje(error.message, "error");
+        throw error;
     }
+}
 
     async function convertirMoneda() {
         const cantidad = parseFloat(document.getElementById("cantidad").value);
@@ -213,21 +214,21 @@
     }
 
     async function login() {
-        const pin = document.getElementById("pin").value;
+    const pin = document.getElementById("pin").value;
 
-        const response = await fetch("/login", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({ pin })
-        });
+    const response = await fetch("/login", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        credentials: "include", // 🔥 CLAVE
+        body: JSON.stringify({ pin })
+    });
 
-        if (response.ok) {
-            document.getElementById("login-container").style.display = "none";
-            document.getElementById("app").style.display = "block";
-        } else {
-            alert("PIN incorrecto");
-        }
+    if (response.ok) {
+        iniciarApp();
+    } else {
+        alert("PIN incorrecto");
     }
+}
 
     function mostrarMensaje(texto, tipo = "exito") {
         const mensaje = document.getElementById("mensaje");
@@ -654,9 +655,27 @@ async function toggleConfirmar(id) {
         }
     }
 
-    cargarResumen();
-    cargarTransferencias();
-    ponerFechaHoy();
+async function iniciarApp() {
+    try {
+        await apiRequest("/check-auth");
+
+        // Si está autenticado → mostrar app
+        document.getElementById("login-container").style.display = "none";
+        document.getElementById("app").style.display = "block";
+
+        cargarResumen();
+        cargarTransferencias();
+        ponerFechaHoy();
+
+    } catch (error) {
+        // No autenticado → mostrar login
+        document.getElementById("login-container").style.display = "block";
+        document.getElementById("app").style.display = "none";
+    }
+}
+
+    // Ejecutar al cargar
+    iniciarApp();
 
     </script>
 
