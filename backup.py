@@ -1,10 +1,12 @@
 import os
 import subprocess
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
 
+load_dotenv()
 
 # Config
-DB_URL = "postgresql://transferencias_app_bjtt_user:WkUIOVHbvPJO0egVJa1QU60Hp49Htekd@dpg-d7ejh7gsfn5c738dija0-a.ohio-postgres.render.com/transferencias_app_bjtt"
+DB_URL = os.getenv("DB_URL")
 
 # Carpeta backups
 CARPETA = "C:/backups_transferencias"
@@ -16,12 +18,17 @@ archivo = f"{CARPETA}/backup_{fecha}.sql"
 
 PG_DUMP_PATH = r"C:\Program Files\PostgreSQL\18\bin\pg_dump.exe"
 
+# 🔥 IMPORTANTE: pasar password a pg_dump
+env = os.environ.copy()
+env["PGPASSWORD"] = os.getenv("DB_PASSWORD")
+
 with open(archivo, "w") as f:
     resultado = subprocess.run(
         [PG_DUMP_PATH, DB_URL],
         stdout=f,
         stderr=subprocess.PIPE,
-        text=True
+        text=True,
+        env=env
     )
 
 if resultado.returncode == 0:
