@@ -4,6 +4,10 @@ from flask import Flask, request, jsonify, render_template, session
 import requests
 from datetime import datetime
 from functools import wraps
+from dotenv import load_dotenv
+import sqlite3
+
+load_dotenv()
 
 app = Flask(__name__)
 
@@ -28,10 +32,6 @@ def login_required(f):
 
 
 def convertir_moneda(monto, de="EUR", a="EUR"):
-    """
-    Convierte un monto entre monedas usando una API externa.
-    """
-
     if de == a:
         return monto
 
@@ -44,84 +44,96 @@ def convertir_moneda(monto, de="EUR", a="EUR"):
         return monto * tasa
 
     except Exception as e:
-        # fallback: devolver el monto original si falla la API
         print("ERROR CONVERSION:", e)
         return monto
 
 
+def es_sqlite(conn):
+    return isinstance(conn, sqlite3.Connection)
+
+
+def ejecutar(conn, cursor, query, params=()):
+    if es_sqlite(conn):
+        query = query.replace("%s", "?")
+    cursor.execute(query, params)
+
+
 def get_db_connection():
-    """
-    Crea y devuelve una conexión a PostgreSQL usando DATABASE_URL.
-
-    Maneja el caso típico de Render donde la URL viene como 'postgres://'
-    y debe convertirse a 'postgresql://'
-    """
-
     database_url = os.environ.get("DATABASE_URL")
 
-    if not database_url:
-        raise Exception("DATABASE_URL no está configurada")
+    if database_url:
+        if database_url.startswith("postgres://"):
+            database_url = database_url.replace(
+                "postgres://", "postgresql://", 1)
+        return psycopg.connect(database_url)
 
-    if database_url.startswith("postgres://"):
-        database_url = database_url.replace(
-            "postgres://", "postgresql://", 1)
+    print("⚠️ Usando SQLite en local")
+    conn = sqlite3.connect("database.db")
+    conn.row_factory = sqlite3.Row
+    return conn
 
-    return psycopg.connect(database_url)
 
-
-def crear_tablas_postgres():
-    """
-    Inicializa las tablas necesarias si no existen.
-
-    - transferencias: guarda cada movimiento
-    - config: guarda configuración por usuario (ej: objetivo mensual)
-    """
+def crear_tablas():
     conn = get_db_connection()
     cur = conn.cursor()
 
-    # Tabla principal
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS transferencias (
-            id SERIAL PRIMARY KEY,
-            monto FLOAT NOT NULL,
-            fecha DATE NOT NULL,
-            descripcion TEXT,
-            persona TEXT NOT NULL,
-            confirmada BOOLEAN DEFAULT FALSE
-        );
-    """)
+    if es_sqlite(conn):
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS transferencias (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                monto REAL NOT NULL,
+                fecha TEXT NOT NULL,
+                descripcion TEXT,
+                persona TEXT NOT NULL,
+                confirmada BOOLEAN DEFAULT 0
+            );
+        """)
 
-    # Tabla de configuración (objetivo por persona)
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS config (
-            id SERIAL PRIMARY KEY,
-            persona TEXT NOT NULL,
-            objetivo_total FLOAT
-        );
-    """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS config (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                persona TEXT NOT NULL,
+                objetivo_total REAL
+            );
+        """)
+    else:
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS transferencias (
+                id SERIAL PRIMARY KEY,
+                monto FLOAT NOT NULL,
+                fecha DATE NOT NULL,
+                descripcion TEXT,
+                persona TEXT NOT NULL,
+                confirmada BOOLEAN DEFAULT FALSE
+            );
+        """)
 
-    # Insert inicial (solo si está vacía)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS config (
+                id SERIAL PRIMARY KEY,
+                persona TEXT NOT NULL,
+                objetivo_total FLOAT
+            );
+        """)
+
     cur.execute("SELECT COUNT(*) FROM config")
     count = cur.fetchone()[0]
 
     if count == 0:
-        cur.execute(
-            "INSERT INTO config (persona, objetivo_total) VALUES (%s, %s)",
-            ("Carlos", 1070)
-        )
-        cur.execute(
-            "INSERT INTO config (persona, objetivo_total) VALUES (%s, %s)",
-            ("Pito", 1070)
-        )
+        ejecutar(conn, cur,
+                 "INSERT INTO config (persona, objetivo_total) VALUES (%s, %s)",
+                 ("Carlos", 1070))
+        ejecutar(conn, cur,
+                 "INSERT INTO config (persona, objetivo_total) VALUES (%s, %s)",
+                 ("Pito", 1070))
 
     conn.commit()
     cur.close()
     conn.close()
 
 
-# Se ejecuta al iniciar la app
 with app.app_context():
-    crear_tablas_postgres()
+    crear_tablas()
 
 
 # ------------------------
@@ -130,7 +142,6 @@ with app.app_context():
 
 @app.route("/")
 def home():
-    """Renderiza el frontend"""
     return render_template("index.html")
 
 
@@ -139,13 +150,13 @@ def login():
     data = request.get_json()
     pin = data.get("pin")
 
-    PIN_CORRECTO = "1234"
+    PIN_CORRECTO = os.environ.get("APP_PIN", "1234")
 
     if pin == PIN_CORRECTO:
         session["auth"] = True
         return jsonify({"ok": True})
-    else:
-        return jsonify({"ok": False}), 401
+
+    return jsonify({"ok": False}), 401
 
 
 @app.route("/check-auth", methods=["GET"])
@@ -168,14 +179,6 @@ def logout():
 @app.route("/transferencias", methods=["POST"])
 @login_required
 def crear_transferencia():
-    """
-    Crea una nueva transferencia.
-
-    Valida:
-    - monto válido
-    - fecha válida
-    - persona obligatoria
-    """
     data = request.get_json()
 
     monto = data.get("monto")
@@ -188,11 +191,10 @@ def crear_transferencia():
 
     try:
         monto = float(monto)
+        if monto <= 0:
+            return jsonify({"error": "Monto inválido"}), 400
     except:
         return jsonify({"error": "Monto inválido"}), 400
-
-    if monto <= 0:
-        return jsonify({"error": "El monto debe ser mayor a 0"}), 400
 
     try:
         datetime.strptime(fecha, "%Y-%m-%d")
@@ -202,10 +204,9 @@ def crear_transferencia():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute(
-        "INSERT INTO transferencias (monto, fecha, descripcion, persona) VALUES (%s, %s, %s, %s)",
-        (monto, fecha, descripcion, persona)
-    )
+    ejecutar(conn, cursor,
+             "INSERT INTO transferencias (monto, fecha, descripcion, persona) VALUES (%s, %s, %s, %s)",
+             (monto, fecha, descripcion, persona))
 
     conn.commit()
     cursor.close()
@@ -214,15 +215,163 @@ def crear_transferencia():
     return jsonify({"mensaje": "Transferencia creada"})
 
 
+@app.route("/transferencias/<int:id>/confirmar", methods=["PATCH"])
+@login_required
+def confirmar_transferencia(id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    ejecutar(conn, cursor,
+             "SELECT confirmada FROM transferencias WHERE id = %s",
+             (id,))
+    resultado = cursor.fetchone()
+
+    if not resultado:
+        return jsonify({"error": "No encontrada"}), 404
+
+    estado_actual = bool(resultado[0])
+
+    if es_sqlite(conn):
+        nuevo_estado = 0 if estado_actual else 1
+    else:
+        nuevo_estado = not estado_actual
+
+    ejecutar(conn, cursor,
+             "UPDATE transferencias SET confirmada = %s WHERE id = %s",
+             (nuevo_estado, id))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return jsonify({"confirmada": bool(nuevo_estado)})
+
+
+@app.route("/transferencias/<int:id>", methods=["PUT"])
+@login_required
+def editar_transferencia(id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    data = request.get_json()
+
+    monto = data.get("monto")
+    fecha = data.get("fecha")
+    descripcion = data.get("descripcion", "")
+
+    if monto is None or fecha is None:
+        return jsonify({"error": "Datos incompletos"}), 400
+
+    try:
+        monto = float(monto)
+        if monto <= 0:
+            return jsonify({"error": "Monto inválido"}), 400
+    except:
+        return jsonify({"error": "Monto inválido"}), 400
+
+    ejecutar(conn, cursor,
+             "UPDATE transferencias SET monto=%s, fecha=%s, descripcion=%s WHERE id=%s",
+             (monto, fecha, descripcion, id))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return jsonify({"ok": True})
+
+
+@app.route("/transferencias/<int:id>", methods=["DELETE"])
+@login_required
+def eliminar_transferencia(id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    ejecutar(conn, cursor,
+             "SELECT confirmada FROM transferencias WHERE id = %s",
+             (id,))
+    resultado = cursor.fetchone()
+
+    if not resultado:
+        return jsonify({"error": "No existe"}), 404
+
+    if resultado[0]:
+        return jsonify({"error": "No se puede eliminar confirmada"}), 400
+
+    ejecutar(conn, cursor,
+             "DELETE FROM transferencias WHERE id = %s",
+             (id,))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return jsonify({"mensaje": "ok"})
+
+
+@app.route("/resumen", methods=["GET"])
+@login_required
+def obtener_resumen():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    persona = request.args.get("persona")
+    moneda = request.args.get("moneda", "EUR")
+    mes = request.args.get("mes") or datetime.now().strftime("%Y-%m")
+
+    if not persona:
+        return jsonify({"error": "Falta persona"}), 400
+
+    if es_sqlite(conn):
+        filtro = "substr(fecha,1,7) = %s"
+        confirmada_true = 1
+        confirmada_false = 0
+    else:
+        filtro = "TO_CHAR(fecha,'YYYY-MM') = %s"
+        confirmada_true = True
+        confirmada_false = False
+
+    ejecutar(conn, cursor, f"""
+        SELECT COALESCE(SUM(monto),0)
+        FROM transferencias
+        WHERE {filtro}
+        AND persona = %s
+        AND confirmada = %s
+    """, (mes, persona, confirmada_true))
+
+    total = cursor.fetchone()[0]
+
+    ejecutar(conn, cursor, f"""
+        SELECT COALESCE(SUM(monto),0)
+        FROM transferencias
+        WHERE {filtro}
+        AND persona = %s
+        AND confirmada = %s
+    """, (mes, persona, confirmada_false))
+
+    pendiente = cursor.fetchone()[0]
+
+    ejecutar(conn, cursor,
+             "SELECT objetivo_total FROM config WHERE persona = %s LIMIT 1",
+             (persona,))
+    row = cursor.fetchone()
+    objetivo = row[0] if row else 0
+
+    restante = objetivo - total
+
+    cursor.close()
+    conn.close()
+
+    return jsonify({
+        "total_confirmado": convertir_moneda(total, "EUR", moneda),
+        "pendiente": convertir_moneda(pendiente, "EUR", moneda),
+        "objetivo": convertir_moneda(objetivo, "EUR", moneda),
+        "restante": convertir_moneda(restante, "EUR", moneda)
+    })
+
+
 @app.route("/transferencias", methods=["GET"])
 @login_required
 def obtener_transferencias():
-    """
-    Devuelve todas las transferencias de una persona.
-    - Ordenadas por fecha descendente
-    - Convierte moneda si es necesario
-    """
-
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -232,7 +381,7 @@ def obtener_transferencias():
     if not persona:
         return jsonify({"error": "Falta persona"}), 400
 
-    cursor.execute("""
+    ejecutar(conn, cursor, """
         SELECT id, monto, fecha, descripcion, persona, confirmada
         FROM transferencias
         WHERE persona = %s
@@ -259,250 +408,33 @@ def obtener_transferencias():
     return jsonify(resultado)
 
 
-@app.route("/transferencias/<int:id>", methods=["DELETE"])
-@login_required
-def eliminar_transferencia(id):
-    """
-    Elimina una transferencia por ID.
-    Devuelve error si no existe.
-    """
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    # 🔒 Verificar si existe y si está confirmada
-    cursor.execute(
-        "SELECT confirmada FROM transferencias WHERE id = %s",
-        (id,)
-    )
-    resultado = cursor.fetchone()
-
-    if not resultado:
-        cursor.close()
-        conn.close()
-        return jsonify({"error": "No existe"}), 404
-
-    if resultado[0]:
-        cursor.close()
-        conn.close()
-        return jsonify({"error": "No se puede eliminar una transferencia confirmada"}), 400
-
-    # ✅ Eliminar si no está confirmada
-    cursor.execute("DELETE FROM transferencias WHERE id = %s", (id,))
-
-    conn.commit()
-    cursor.close()
-    conn.close()
-
-    return jsonify({"mensaje": "Transferencia eliminada"})
-
-
-@app.route("/transferencias/<int:id>/confirmar", methods=["PATCH"])
-@login_required
-def confirmar_transferencia(id):
-    conn = None
-    cursor = None
-
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        cursor.execute(
-            "SELECT confirmada FROM transferencias WHERE id = %s",
-            (id,)
-        )
-        resultado = cursor.fetchone()
-
-        if not resultado:
-            return jsonify({"error": "No encontrada"}), 404
-
-        nuevo_estado = not resultado[0]
-
-        cursor.execute(
-            "UPDATE transferencias SET confirmada = %s WHERE id = %s",
-            (nuevo_estado, id)
-        )
-
-        conn.commit()
-
-        return jsonify({"confirmada": nuevo_estado})
-
-    except Exception as e:
-        print("ERROR CONFIRMAR:", e)
-        return jsonify({"error": "Error interno"}), 500
-
-    finally:
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
-
-
-@app.route("/transferencias/<int:id>", methods=["PUT"])
-@login_required
-def editar_transferencia(id):
-    conn = None
-    cursor = None
-
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        # 🔒 Verificar si existe y si está confirmada
-        cursor.execute(
-            "SELECT confirmada, fecha FROM transferencias WHERE id = %s",
-            (id,)
-        )
-        resultado = cursor.fetchone()
-
-        if not resultado:
-            return jsonify({"error": "No encontrada"}), 404
-
-        confirmada, fecha_actual = resultado
-
-        if confirmada:
-            return jsonify({"error": "No se puede editar una transferencia confirmada"}), 400
-
-        data = request.get_json()
-
-        monto = data.get("monto")
-        fecha = data.get("fecha")
-        descripcion = data.get("descripcion")
-
-        # Validar monto
-        if monto is not None:
-            try:
-                monto = float(monto)
-                if monto <= 0:
-                    return jsonify({"error": "Monto inválido"}), 400
-            except:
-                return jsonify({"error": "Monto inválido"}), 400
-
-        # Validar fecha
-        if fecha:
-            try:
-                datetime.strptime(fecha, "%Y-%m-%d")
-            except:
-                return jsonify({"error": "Fecha inválida"}), 400
-        else:
-            fecha = fecha_actual
-
-        cursor.execute("""
-            UPDATE transferencias
-            SET monto = %s,
-                fecha = %s,
-                descripcion = %s
-            WHERE id = %s
-        """, (monto, fecha, descripcion, id))
-
-        conn.commit()
-
-        return jsonify({"mensaje": "Transferencia actualizada"})
-
-    except Exception as e:
-        print("ERROR EDITAR:", e)
-        return jsonify({"error": "Error interno"}), 500
-
-    finally:
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
-
-# ------------------------
-# RESUMEN
-# ------------------------
-
-
-@app.route("/resumen", methods=["GET"])
-@login_required
-def obtener_resumen():
-    """
-    Calcula:
-    - total confirmado
-    - pendiente
-    - objetivo
-    - restante
-
-    Todo filtrado por:
-    - persona
-    - mes (o mes actual por defecto)
-    """
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    persona = request.args.get("persona")
-    moneda = request.args.get("moneda", "EUR")
-    mes = request.args.get("mes") or datetime.now().strftime("%Y-%m")
-
-    # Total confirmado
-    cursor.execute("""
-        SELECT COALESCE(SUM(monto), 0)
-        FROM transferencias
-        WHERE TO_CHAR(fecha, 'YYYY-MM') = %s
-        AND persona = %s
-        AND confirmada = TRUE
-    """, (mes, persona))
-    total = cursor.fetchone()[0]
-
-    # Pendiente
-    cursor.execute("""
-        SELECT COALESCE(SUM(monto), 0)
-        FROM transferencias
-        WHERE TO_CHAR(fecha, 'YYYY-MM') = %s
-        AND persona = %s
-        AND confirmada = FALSE
-    """, (mes, persona))
-    pendiente = cursor.fetchone()[0]
-
-    # Objetivo
-    cursor.execute(
-        "SELECT objetivo_total FROM config WHERE persona = %s LIMIT 1",
-        (persona,)
-    )
-
-    row = cursor.fetchone()
-    objetivo = row[0] if row else 0
-
-    cursor.close()
-    conn.close()
-
-    return jsonify({
-        "total_confirmado": convertir_moneda(total, "EUR", moneda),
-        "pendiente": convertir_moneda(pendiente, "EUR", moneda),
-        "objetivo": convertir_moneda(objetivo, "EUR", moneda),
-        "restante": convertir_moneda(objetivo - total, "EUR", moneda)
-    })
-
-
 @app.route("/objetivo", methods=["POST"])
 @login_required
 def guardar_objetivo():
-    """
-    Actualiza el objetivo mensual de una persona.
-    """
     data = request.get_json()
 
     objetivo = data.get("objetivo")
     persona = data.get("persona")
 
-    if not objetivo or objetivo <= 0:
+    try:
+        objetivo = float(objetivo)
+        if objetivo <= 0:
+            return jsonify({"error": "Objetivo inválido"}), 400
+    except:
         return jsonify({"error": "Objetivo inválido"}), 400
 
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute(
-        "UPDATE config SET objetivo_total = %s WHERE persona = %s",
-        (objetivo, persona)
-    )
+    ejecutar(conn, cursor,
+             "UPDATE config SET objetivo_total = %s WHERE persona = %s",
+             (objetivo, persona))
 
     conn.commit()
     cursor.close()
     conn.close()
 
-    return jsonify({"mensaje": "Objetivo guardado"})
+    return jsonify({"mensaje": "ok"})
 
 
 if __name__ == "__main__":

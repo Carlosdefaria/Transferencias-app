@@ -93,10 +93,10 @@
 
         <div class="card">
             <h2>Resumen</h2>
-            <p>Objetivo a alcanzar: <span id="objetivo">0</span> €</p>
-            <p>Total confirmado: <span id="confirmado">0</span> €</p>
-            <p>Restante para llegar al objetivo: <span id="restante">0</span> €</p>
-            <p>Transferencias hechas aún no recibidas: <span id="pendiente">0</span> €</p>
+            <p>Objetivo a alcanzar: <span id="objetivo">0</span></p>
+            <p>Total confirmado: <span id="confirmado">0</span></p>
+            <p>Restante para llegar al objetivo: <span id="restante">0</span></p>
+            <p>Transferencias hechas aún no recibidas: <span id="pendiente">0</span></p>
         
             <h3>Progreso</h3>
             <div id="barra-container">
@@ -246,7 +246,7 @@ async function apiRequest(url, options = {}) {
     if (response.ok) {
         iniciarApp();
     } else {
-        alert("PIN incorrecto");
+        mostrarMensaje("PIN incorrecto", "error");
     }
 }
 
@@ -434,11 +434,17 @@ function editarTransferencia(id) {
     if (desc === "Sin descripción") {
         desc = "";
     }
+
     const fechaTexto = item.querySelector(".transferencia-fecha").innerText;
 
-    // convertir dd/mm/yyyy → yyyy-mm-dd
+    // 🔥 FIX: convertir dd/mm/yyyy → yyyy-mm-dd con padding correcto
     const partes = fechaTexto.split('/');
-    const fecha = `${partes[2]}-${partes[1]}-${partes[0]}`;
+
+    const dia = partes[0].padStart(2, '0');
+    const mes = partes[1].padStart(2, '0');
+    const año = partes[2];
+
+    const fecha = `${año}-${mes}-${dia}`;
 
     item.innerHTML = `
         <div class="transferencia editando">
@@ -620,43 +626,40 @@ async function toggleConfirmar(id) {
 
 
     async function guardarObjetivo() {
-        const btn = document.getElementById("btn-objetivo");
+    const btn = document.getElementById("btn-objetivo");
 
-        const objetivo = document.getElementById("nuevo-objetivo").value;
+    const objetivo = document.getElementById("nuevo-objetivo").value;
+    const valor = parseFloat(objetivo);
 
-        if (!objetivo || objetivo <= 0) {
-            mostrarMensaje("Objetivo inválido", "error");
-            return;
-        }
-
-        // 🔹 activar loading
-        const textoOriginal = btn.innerText;
-        btn.disabled = true;
-        btn.innerText = "Guardando...";
-
-        try {
-            await apiRequest("/objetivo", {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({
-                    objetivo: parseFloat(objetivo),
-                    persona: getPersonaSeleccionada()
-                })
-            });
-
-            mostrarMensaje("Objetivo actualizado");
-
-            document.getElementById("nuevo-objetivo").value = "";
-            cargarResumen();
-
-        } catch (error) {
-            // ya manejado por apiRequest
-        } finally {
-            // 🔹 desactivar loading
-            btn.disabled = false;
-            btn.innerText = textoOriginal;
-        }
+    if (isNaN(valor) || valor <= 0) {
+        mostrarMensaje("Objetivo inválido", "error");
+        return;
     }
+
+    const textoOriginal = btn.innerText;
+    btn.disabled = true;
+    btn.innerText = "Guardando...";
+
+    try {
+        await apiRequest("/objetivo", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                objetivo: valor,
+                persona: getPersonaSeleccionada()
+            })
+        });
+
+        mostrarMensaje("Objetivo actualizado");
+
+        document.getElementById("nuevo-objetivo").value = "";
+        cargarResumen();
+
+    } finally {
+        btn.disabled = false;
+        btn.innerText = textoOriginal;
+    }
+}
 
 async function iniciarApp() {
     try {

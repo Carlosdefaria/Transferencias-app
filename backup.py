@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Config
-DB_URL = os.getenv("DB_URL")
+DB_URL = os.getenv("DATABASE_URL")
 
 # Carpeta backups
 CARPETA = "C:/backups_transferencias"
