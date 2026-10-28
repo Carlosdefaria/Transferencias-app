@@ -74,18 +74,19 @@ def crear_tablas():
                         os.environ.get("SQLITE_PATH", "database.db"))
             id_columna = "INTEGER PRIMARY KEY AUTOINCREMENT"
             tipo_fecha = "TEXT"
-            tipo_importe = "REAL"
             falso = "0"
         else:
             id_columna = "SERIAL PRIMARY KEY"
             tipo_fecha = "DATE"
-            tipo_importe = "FLOAT"
             falso = "FALSE"
 
+        # NUMERIC(12,2) guarda los importes exactos, con 2 decimales.
+        # Las tablas que ya existan en producción no cambian: para ellas está
+        # el script migraciones/m001_numeric.py.
         ejecutar(conn, f"""
             CREATE TABLE IF NOT EXISTS transferencias (
                 id {id_columna},
-                monto {tipo_importe} NOT NULL,
+                monto NUMERIC(12,2) NOT NULL,
                 fecha {tipo_fecha} NOT NULL,
                 descripcion TEXT,
                 persona TEXT NOT NULL,
@@ -96,7 +97,8 @@ def crear_tablas():
             CREATE TABLE IF NOT EXISTS config (
                 id {id_columna},
                 persona TEXT NOT NULL,
-                objetivo_total {tipo_importe}
+                objetivo_total NUMERIC(12,2),
+                CONSTRAINT config_persona_unica UNIQUE (persona)
             )
         """)
 
