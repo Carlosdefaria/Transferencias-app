@@ -152,6 +152,7 @@ h2 { font-size: 1.05rem; font-weight: 650; }
     position: sticky;
     top: 0;
     z-index: 10;
+    background: var(--fondo); /* respaldo para navegadores sin color-mix() */
     background: color-mix(in srgb, var(--fondo) 88%, transparent);
     backdrop-filter: blur(8px);
     border-bottom: 1px solid var(--borde);
@@ -488,6 +489,7 @@ input[aria-invalid="true"] { border-color: var(--peligro); }
 }
 .movimiento.confirmada {
     border-left-color: var(--confirmado);
+    background: var(--confirmado-fondo);
     background: color-mix(in srgb, var(--confirmado-fondo) 55%, var(--superficie));
 }
 .movimiento.editando { border-left-color: var(--primario); }
