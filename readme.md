@@ -65,11 +65,10 @@ Permite llevar un control claro del dinero transferido mes a mes, evitando confu
 ```bash
 git clone https://github.com/Carlosdefaria/Transferencias-app.git
 cd Transferencias-app
-pip install -r requirements.txt
+pip install -r requirements-dev.txt   # incluye pytest; en Render solo se usa requirements.txt
 
 # Configurar variables de entorno (IMPORTANTE)
-export DATABASE_URL=tu_database_url
-export SECRET_KEY=tu_secret_key
+cp .env.example .env   # y edita los valores
 
 # Ejecutar la app
 python app.py
