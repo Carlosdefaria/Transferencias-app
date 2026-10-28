@@ -23,11 +23,15 @@ os.environ["DATABASE_URL"] = _url_test
 os.environ["SECRET_KEY"] = "clave-solo-para-tests"
 os.environ["APP_PIN"] = "4321"
 os.environ["SQLITE_PATH"] = os.path.join(tempfile.mkdtemp(), "test.db")
+# Los tests no simulan producción salvo que un test lo pida.
+os.environ.pop("RENDER", None)
+os.environ.pop("APP_ENV", None)
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import db  # noqa: E402
 import logica  # noqa: E402
+import seguridad  # noqa: E402
 from app import crear_app  # noqa: E402
 
 PIN = "4321"
@@ -41,6 +45,13 @@ def tasas_falsas(monkeypatch):
     monkeypatch.setattr(logica, "descargar_tasas", lambda: dict(TASAS_PRUEBA))
     yield
     logica.vaciar_cache_tasas()
+
+
+@pytest.fixture(autouse=True)
+def limitador_limpio():
+    seguridad.limitador_login._fallos.clear()
+    yield
+    seguridad.limitador_login._fallos.clear()
 
 
 @pytest.fixture

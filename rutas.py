@@ -1,11 +1,13 @@
 """Rutas HTTP: leen la petición, llaman a la lógica y a la BD y responden JSON."""
 
-import os
+import hmac
 from functools import wraps
 
-from flask import Blueprint, jsonify, render_template, request, session
+from flask import (Blueprint, current_app, jsonify, render_template, request,
+                   session)
 
 import db
+from seguridad import limitador_login
 from logica import (Conflicto, DatosInvalidos, NoEncontrada, TasasNoDisponibles,
                     calcular_resumen, convertir, obtener_tasas, rango_mes,
                     tasa_cambio, validar_descripcion, validar_fecha,
@@ -76,13 +78,29 @@ def home():
 
 @bp.route("/login", methods=["POST"])
 def login():
-    data = request.get_json(silent=True) or {}
-    pin = str(data.get("pin", ""))
+    ip = request.remote_addr or "desconocida"
 
-    if pin == os.environ.get("APP_PIN", "1234"):
+    espera = limitador_login.segundos_bloqueo(ip)
+    if espera:
+        minutos = (espera + 59) // 60
+        respuesta = jsonify({"ok": False,
+                             "error": f"Demasiados intentos. Prueba en {minutos} min."})
+        respuesta.headers["Retry-After"] = str(espera)
+        return respuesta, 429
+
+    data = request.get_json(silent=True)
+    pin = str(data.get("pin", "")) if isinstance(data, dict) else ""
+
+    # compare_digest tarda lo mismo acierte o falle, así el tiempo de
+    # respuesta no da pistas sobre cuántas cifras son correctas.
+    if hmac.compare_digest(pin.encode(), current_app.config["APP_PIN"].encode()):
+        limitador_login.reiniciar(ip)
+        session.clear()  # sesión nueva al entrar
         session["auth"] = True
+        session.permanent = True
         return jsonify({"ok": True})
 
+    limitador_login.registrar_fallo(ip)
     return jsonify({"ok": False, "error": "PIN incorrecto"}), 401
 
 
