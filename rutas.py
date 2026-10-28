@@ -210,7 +210,8 @@ def obtener_resumen():
 
     respuesta = {
         clave: importe(convertir(resumen[clave], "EUR", moneda, tasas))
-        for clave in ("total_confirmado", "pendiente", "objetivo", "restante")
+        for clave in ("total_confirmado", "pendiente", "objetivo", "restante",
+                      "restante_tras_pendiente")
     }
     respuesta.update({
         "porcentaje": float(resumen["porcentaje"]),

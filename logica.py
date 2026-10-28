@@ -135,6 +135,7 @@ def calcular_resumen(confirmado, pendiente, objetivo):
     """Calcula el resumen del mes. Todos los importes en Decimal.
 
     - restante: lo que falta por recibir (negativo si se superó el objetivo).
+    - restante_tras_pendiente: lo que faltaría si se confirmara lo pendiente.
     - porcentaje: progreso confirmado respecto al objetivo (puede pasar de 100).
     - porcentaje_pendiente: lo que aportaría lo pendiente si se confirma.
     """
@@ -152,6 +153,7 @@ def calcular_resumen(confirmado, pendiente, objetivo):
         "pendiente": pendiente,
         "objetivo": objetivo,
         "restante": restante,
+        "restante_tras_pendiente": restante - pendiente,
         "porcentaje": porcentaje.quantize(una_cifra, rounding=ROUND_HALF_UP),
         "porcentaje_pendiente": porcentaje_pendiente.quantize(una_cifra, rounding=ROUND_HALF_UP),
     }
