@@ -42,7 +42,7 @@
         <div class="card">
         <h2>Moneda</h2>
 
-        <select id="moneda" onchange="cargarResumen()">
+        <select id="moneda" onchange="recargar()">
             <option value="EUR">EUR (€)</option>
             <option value="USD">USD ($)</option>
             <option value="GBP">GBP (£)</option>
@@ -110,7 +110,7 @@
         <div class="card">
             <h2>Actualizar objetivo</h2>
 
-            <input type="number" id="nuevo-objetivo" placeholder="Nuevo objetivo">
+            <input type="number" id="nuevo-objetivo" placeholder="Nuevo objetivo (€)" step="0.01">
             <button id="btn-objetivo" onclick="guardarObjetivo()">Guardar objetivo</button>
         </div>
 
@@ -118,7 +118,7 @@
         
         <div class="card">
             <h2>Agregar transferencia</h2>
-            <input type="number" id="monto" placeholder="Monto">
+            <input type="number" id="monto" placeholder="Monto (€)" step="0.01">
             <input type="date" id="fecha">
             <input type="text" id="descripcion" placeholder="Descripción">
             <button id="btn-agregar" onclick="agregarTransferencia()">Agregar</button>
@@ -195,22 +195,13 @@ async function apiRequest(url, options = {}) {
         try {
             resultadoElem.innerText = "Calculando...";
 
-            const response = await fetch(`https://api.exchangerate-api.com/v4/latest/${de}`);
-            const data = await response.json();
-
-            const tasa = data.rates[a];
-            const resultado = cantidad * tasa;
-
-            const resultadoFormateado = new Intl.NumberFormat('es-ES', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            }).format(resultado);
+            const data = await apiRequest(`/convertir?cantidad=${cantidad}&de=${de}&a=${a}`);
 
             resultadoElem.innerText =
-                `${cantidad} ${de} → ${resultadoFormateado} ${a}`;
+                `${cantidad} ${de} → ${formatearDinero(data.resultado)} ${a}`;
 
             document.getElementById("tasa-info").innerText =
-                `1 ${de} = ${tasa.toFixed(4)} ${a}`;
+                `1 ${de} = ${data.tasa} ${a}`;
 
         } catch (error) {
             resultadoElem.innerText = "Error al obtener tasa de cambio";
@@ -266,7 +257,29 @@ async function apiRequest(url, options = {}) {
         return new Intl.NumberFormat('es-ES', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
-        }).format(valor || 0);
+        }).format(Number(valor) || 0);
+    }
+
+    // Evita que una descripción con HTML se ejecute al insertarla en la página
+    function escaparHTML(texto) {
+        const reemplazos = {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"};
+        return String(texto ?? "").replace(/[&<>"']/g, c => reemplazos[c]);
+    }
+
+    // "2026-10-05" → "05/10/2026" sin pasar por Date (evita desfases de zona horaria)
+    function formatearFecha(iso) {
+        const [anio, mes, dia] = iso.split("-");
+        return `${dia}/${mes}/${anio}`;
+    }
+
+    function mesActual() {
+        const hoy = new Date();
+        return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}`;
+    }
+
+    function recargar() {
+        cargarResumen();
+        cargarTransferencias();
     }
 
     function getPersonaSeleccionada() {
@@ -295,7 +308,8 @@ async function apiRequest(url, options = {}) {
         document.getElementById("fecha").value = `${year}-${month}-${day}`;
     }
 
-    let mesSeleccionado = null;
+    // El resumen y la lista usan siempre el mismo mes (por defecto, el actual)
+    let mesSeleccionado = mesActual();
 
     function aplicarFiltro() {
         const input = document.getElementById("filtro-mes").value;
@@ -307,8 +321,8 @@ async function apiRequest(url, options = {}) {
     }
 
     function limpiarFiltro() {
-        mesSeleccionado = null;
-        document.getElementById("filtro-mes").value = "";
+        mesSeleccionado = mesActual();
+        document.getElementById("filtro-mes").value = mesSeleccionado;
         cargarResumen();
         cargarTransferencias();
     }
@@ -316,15 +330,9 @@ async function apiRequest(url, options = {}) {
     async function cargarResumen() {
         let persona = getPersonaSeleccionada();
         let moneda = document.getElementById("moneda").value;
-        let simbolo = obtenerSimbolo(moneda);
-
-        let url = `/resumen?persona=${persona}&moneda=${moneda}`;
-
-        if (mesSeleccionado) {
-            url += `&mes=${mesSeleccionado}`;
-        }
-
-        const data = await apiRequest(url);
+        const data = await apiRequest(`/resumen?persona=${persona}&moneda=${moneda}&mes=${mesSeleccionado}`);
+        const simbolo = obtenerSimbolo(data.moneda);
+        if (data.aviso) mostrarMensaje(data.aviso, "error");
 
         document.getElementById("confirmado").innerText = formatearDinero(data.total_confirmado) + " " + simbolo;
         document.getElementById("objetivo").innerText = formatearDinero(data.objetivo) + " " + simbolo;
@@ -335,9 +343,7 @@ async function apiRequest(url, options = {}) {
         restanteElem.style.color = data.restante <= 0 ? "green" : "red";
         document.getElementById("pendiente").style.color = "orange";
 
-        let porcentaje = data.objetivo > 0 
-            ? (data.total_confirmado / data.objetivo) * 100 
-            : 0;
+        let porcentaje = data.porcentaje;
 
         if (porcentaje > 100) porcentaje = 100;
 
@@ -359,21 +365,23 @@ async function apiRequest(url, options = {}) {
 async function cargarTransferencias() {
     const persona = getPersonaSeleccionada();
     const moneda = document.getElementById("moneda").value;
-    const simbolo = obtenerSimbolo(moneda);
 
-    const data = await apiRequest(`/transferencias?persona=${persona}&moneda=${moneda}`);
+    const data = await apiRequest(`/transferencias?persona=${persona}&moneda=${moneda}&mes=${mesSeleccionado}`);
+    const simbolo = obtenerSimbolo(data.moneda);
 
     const lista = document.getElementById("lista-transferencias");
     lista.innerHTML = "";
 
-    data.forEach(t => {
-        if (mesSeleccionado && !t.fecha.startsWith(mesSeleccionado)) return;
-
+    data.transferencias.forEach(t => {
         const item = document.createElement("li");
         item.id = `transferencia-${t.id}`;
         item.dataset.confirmada = t.confirmada;
+        // Valores originales (en EUR) para el formulario de edición
+        item.dataset.montoEur = t.monto_eur;
+        item.dataset.fecha = t.fecha;
+        item.dataset.descripcion = t.descripcion;
 
-        const fecha = new Date(t.fecha).toLocaleDateString("es-ES");
+        const fecha = formatearFecha(t.fecha);
 
         item.innerHTML = `
             <div class="transferencia">
@@ -390,7 +398,7 @@ async function cargarTransferencias() {
                     </div>
 
                     <span class="transferencia-desc">
-                        ${t.descripcion || "Sin descripción"}
+                        ${escaparHTML(t.descripcion) || "Sin descripción"}
                     </span>
                 </div>
 
@@ -426,25 +434,11 @@ async function cargarTransferencias() {
 function editarTransferencia(id) {
     const item = document.getElementById(`transferencia-${id}`);
 
-    const montoTexto = item.querySelector(".transferencia-monto").innerText;
-    const monto = montoTexto.replace(/[^\d,.-]/g, "").replace(",", ".");
-
-    let desc = item.querySelector(".transferencia-desc").innerText;
-
-    if (desc === "Sin descripción") {
-        desc = "";
-    }
-
-    const fechaTexto = item.querySelector(".transferencia-fecha").innerText;
-
-    // 🔥 FIX: convertir dd/mm/yyyy → yyyy-mm-dd con padding correcto
-    const partes = fechaTexto.split('/');
-
-    const dia = partes[0].padStart(2, '0');
-    const mes = partes[1].padStart(2, '0');
-    const año = partes[2];
-
-    const fecha = `${año}-${mes}-${dia}`;
+    // Se usan los datos originales guardados en el elemento, no el texto
+    // mostrado (que puede estar convertido a otra moneda).
+    const monto = item.dataset.montoEur;
+    const fecha = item.dataset.fecha;
+    const desc = escaparHTML(item.dataset.descripcion);
 
     item.innerHTML = `
         <div class="transferencia editando">
@@ -452,7 +446,7 @@ function editarTransferencia(id) {
             <div class="transferencia-info">
                 
                 <div class="linea-principal">
-                    <input type="number" step="0.01" id="edit-monto-${id}" value="${monto}" class="input-edit small">
+                    <input type="number" step="0.01" id="edit-monto-${id}" value="${monto}" class="input-edit small" aria-label="Monto en euros" title="Monto en euros">
                     <input type="date" id="edit-fecha-${id}" value="${fecha}" class="input-edit small">
                 </div>
 
@@ -556,9 +550,9 @@ async function guardarEdicion(id) {
             document.getElementById("descripcion").value = "";
             document.getElementById("monto").focus();
 
-            // reset filtro
-            mesSeleccionado = null;
-            document.getElementById("filtro-mes").value = "";
+            // mostrar el mes de la transferencia recién creada
+            mesSeleccionado = fecha.slice(0, 7);
+            document.getElementById("filtro-mes").value = mesSeleccionado;
 
             // recargar datos
             cargarResumen();
@@ -669,6 +663,7 @@ async function iniciarApp() {
         document.getElementById("login-container").style.display = "none";
         document.getElementById("app").style.display = "block";
 
+        document.getElementById("filtro-mes").value = mesSeleccionado;
         cargarResumen();
         cargarTransferencias();
         ponerFechaHoy();
