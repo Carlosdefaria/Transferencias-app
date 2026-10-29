@@ -195,7 +195,7 @@ async function iniciar() {
         estado.moneda = moneda;
         $("moneda").value = moneda;
     }
-    $("filtro-mes").value = estado.mes;
+    pintarMes();
 
     try {
         await api("/check-auth");
@@ -630,6 +630,8 @@ function pintarSelectorPersonas() {
         return [radio, etiqueta];
     });
     selector.replaceChildren(leyenda, ...opciones);
+    // Con una sola persona el selector no aporta nada: su nombre ya sale en el resumen.
+    selector.hidden = estado.personas.length < 2;
 }
 
 function elegirPersona(nombre) {
@@ -767,10 +769,17 @@ function recargar() {
     cargarTransferencias(estado.version);
 }
 
+function pintarMes() {
+    $("filtro-mes").value = estado.mes;
+    $("texto-mes").textContent = nombreMes(estado.mes);
+    // "Mes actual" solo tiene sentido si se está viendo otro mes.
+    $("btn-mes-actual").disabled = estado.mes === mesActual();
+}
+
 function cambiarMes(mes) {
     if (!/^\d{4}-\d{2}$/.test(mes)) return;
     estado.mes = mes;
-    $("filtro-mes").value = mes;
+    pintarMes();
     recargar();
 }
 
@@ -790,6 +799,10 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     $("filtro-mes").addEventListener("change", (evento) => cambiarMes(evento.target.value));
+    // En ordenador, un clic en la caja no abre el calendario por sí solo: se pide.
+    $("filtro-mes").addEventListener("click", (evento) => {
+        try { evento.target.showPicker(); } catch { /* navegador sin showPicker */ }
+    });
     $("mes-anterior").addEventListener("click", () => cambiarMes(sumarMeses(estado.mes, -1)));
     $("mes-siguiente").addEventListener("click", () => cambiarMes(sumarMeses(estado.mes, 1)));
     $("btn-mes-actual").addEventListener("click", () => cambiarMes(mesActual()));
