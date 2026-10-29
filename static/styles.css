@@ -557,12 +557,8 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     }
     .cifra-objetivo dd { margin: 0; }
 }
-/* Los puntos hacen de leyenda de la barra: mismo color que cada parte */
-.cifra-confirmado .punto { background: var(--color-progreso); }
-.cifra-pendiente .punto {
-    background: var(--pista-barra);
-    background: color-mix(in srgb, var(--color-progreso) 40%, transparent);
-}
+.cifra-confirmado .punto { background: var(--confirmado); }
+.cifra-pendiente .punto { background: var(--pendiente-barra); }
 
 .aviso {
     margin-top: .75rem;
