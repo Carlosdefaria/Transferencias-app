@@ -7,7 +7,7 @@ App web Flask para controlar las transferencias mensuales que me envía mi padre
 - Filtro por mes (por defecto, el actual): la lista y el resumen usan siempre el mismo mes. Totales del mes: confirmado, pendiente, objetivo, restante y barra de progreso.
 - Objetivo mensual editable por persona (`POST /objetivo`, tabla `config`).
 - Login con un único PIN compartido (`APP_PIN`, obligatorio en producción) y sesión de Flask (30 días). Máximo 5 PIN incorrectos cada 15 minutos por IP (`seguridad.limitador_login`, en memoria). Las personas no son usuarios con login propio: se eligen en un selector y filtran los datos.
-- Gestión de personas desde la app (sección "Personas"): añadir, renombrar (también cambia el nombre en sus transferencias) y eliminar. Solo se elimina a quien no tiene transferencias y nunca a la última. El selector se construye con `GET /personas`; Carlos y Pito son solo los datos iniciales (`db.PERSONAS_INICIALES`) de una BD vacía.
+- Gestión de personas desde la app (botón "Personas" de la cabecera, que abre una ventana modal `<dialog>`): añadir, renombrar (también cambia el nombre en sus transferencias) y eliminar. Solo se elimina a quien no tiene transferencias y nunca a la última. El selector se construye con `GET /personas`; Carlos y Pito son solo los datos iniciales (`db.PERSONAS_INICIALES`) de una BD vacía.
 - Visualización en EUR/USD/GBP con ExchangeRate-API. Las tasas se piden una vez (base EUR) y se guardan en caché 1 hora (`logica.obtener_tasas`); si la API falla, se muestra en EUR con un aviso. El conversor de la interfaz usa `/convertir`. Los importes se guardan siempre en EUR y se editan en EUR (`monto_eur`).
 
 ## Estructura

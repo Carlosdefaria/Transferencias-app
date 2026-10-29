@@ -52,9 +52,45 @@
     <header class="cabecera">
         <div class="cabecera-interior">
             <p class="cabecera-titulo">Transferencias</p>
-            <button id="btn-logout" type="button" class="boton fantasma pequeno">Cerrar sesión</button>
+            <div class="cabecera-acciones">
+                <button id="btn-personas" type="button" class="boton fantasma pequeno"
+                        aria-haspopup="dialog" aria-controls="dialogo-personas">Personas</button>
+                <button id="btn-logout" type="button" class="boton fantasma pequeno">Cerrar sesión</button>
+            </div>
         </div>
     </header>
+
+    <!-- PERSONAS: ventana modal (<dialog>) que se abre desde la cabecera.
+         El navegador la pone por encima de todo y la cierra con Escape. -->
+    <dialog id="dialogo-personas" class="dialogo" aria-labelledby="titulo-personas">
+        <div class="dialogo-cabecera">
+            <h2 id="titulo-personas">Personas</h2>
+            <button id="btn-cerrar-personas" type="button" class="boton icono fantasma" aria-label="Cerrar">×</button>
+        </div>
+
+        <!-- Los avisos van aquí dentro mientras la ventana está abierta; si no, quedarían detrás -->
+        <div class="avisos" role="status" aria-live="polite"></div>
+
+        <ul id="lista-personas" class="lista lista-personas"></ul>
+
+        <form id="form-persona" class="formulario" novalidate>
+            <h3 class="subtitulo">Añadir persona</h3>
+            <div class="campos-linea">
+                <div class="campo">
+                    <label for="nombre-persona" class="etiqueta">Nombre</label>
+                    <input id="nombre-persona" type="text" maxlength="40" required autocomplete="off"
+                           aria-describedby="error-persona">
+                </div>
+                <div class="campo">
+                    <label for="objetivo-persona" class="etiqueta">Objetivo mensual (€)</label>
+                    <input id="objetivo-persona" type="number" inputmode="decimal" step="0.01" min="0.01"
+                           placeholder="1070">
+                </div>
+            </div>
+            <p id="error-persona" class="error-campo"></p>
+            <button id="btn-persona" type="submit" class="boton secundario ancho">Añadir persona</button>
+        </form>
+    </dialog>
 
     <main id="principal" class="contenedor">
         <h1 class="sr-only">Control de Transferencias</h1>
@@ -204,32 +240,6 @@
                                 <p id="resultado-conversion" class="dato-medio"></p>
                                 <p id="tasa-info" class="texto-suave"></p>
                             </div>
-                        </form>
-                    </details>
-                </section>
-
-                <!-- PERSONAS -->
-                <section class="tarjeta" aria-labelledby="titulo-personas">
-                    <details class="plegable">
-                        <summary><h2 id="titulo-personas" class="en-linea">Personas</h2></summary>
-                        <ul id="lista-personas" class="lista lista-personas"></ul>
-
-                        <form id="form-persona" class="formulario" novalidate>
-                            <h3 class="subtitulo">Añadir persona</h3>
-                            <div class="campos-linea">
-                                <div class="campo">
-                                    <label for="nombre-persona" class="etiqueta">Nombre</label>
-                                    <input id="nombre-persona" type="text" maxlength="40" required autocomplete="off"
-                                           aria-describedby="error-persona">
-                                </div>
-                                <div class="campo">
-                                    <label for="objetivo-persona" class="etiqueta">Objetivo mensual (€)</label>
-                                    <input id="objetivo-persona" type="number" inputmode="decimal" step="0.01" min="0.01"
-                                           placeholder="1070">
-                                </div>
-                            </div>
-                            <p id="error-persona" class="error-campo"></p>
-                            <button id="btn-persona" type="submit" class="boton secundario ancho">Añadir persona</button>
                         </form>
                     </details>
                 </section>
