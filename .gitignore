@@ -17,3 +17,5 @@ backups_transferencias/
 # Sistema
 .DS_Store
 Thumbs.db
+# Tests
+.pytest_cache/
