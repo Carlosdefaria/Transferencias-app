@@ -47,6 +47,9 @@ https://tu-app.onrender.com
 - Autenticación basada en sesión
 - Protección de rutas sensibles
 - Uso de variables de entorno (`SECRET_KEY`, `DATABASE_URL`)
+- Límite de 5 intentos de PIN cada 15 minutos por IP
+- Cookies de sesión `HttpOnly`, `SameSite=Lax` y `Secure` en producción
+- Cabeceras de seguridad (Content-Security-Policy, HSTS, nosniff) y comprobación de `Origin` contra CSRF
 
 ---
 
