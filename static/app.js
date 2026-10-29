@@ -11,7 +11,8 @@ const $ = (id) => document.getElementById(id);
 const SIMBOLOS = { EUR: "€", USD: "$", GBP: "£" };
 
 const estado = {
-    persona: "Carlos",
+    persona: null,   // se elige al cargar la lista de personas
+    personas: [],
     moneda: "EUR",
     mes: mesActual(),
     // Cada recarga incrementa este número. Si llega una respuesta de una
@@ -174,18 +175,20 @@ function mostrarLogin(mensaje = "") {
     $("pin").focus();
 }
 
-function mostrarApp() {
+async function mostrarApp() {
     mostrarVista("vista-app");
     $("fecha").value = hoyISO();
+    // Sin la lista de personas no se sabe qué datos pedir, así que va primero.
+    try {
+        await cargarPersonas();
+    } catch (error) {
+        mostrarEstadoLista("error", `No se pudieron cargar las personas: ${error.message}`, mostrarApp);
+        return;
+    }
     recargar();
 }
 
 async function iniciar() {
-    const persona = leerPreferencia("persona");
-    if (persona && document.querySelector(`input[name=persona][value="${persona}"]`)) {
-        estado.persona = persona;
-        document.querySelector(`input[name=persona][value="${persona}"]`).checked = true;
-    }
     const moneda = leerPreferencia("moneda");
     if (moneda && SIMBOLOS[moneda]) {
         estado.moneda = moneda;
@@ -306,7 +309,7 @@ function pintarResumen(datos) {
 // HISTORIAL
 // -----------------------------------------------------
 
-function mostrarEstadoLista(tipo, texto, conReintento = false) {
+function mostrarEstadoLista(tipo, texto, alReintentar = null) {
     const caja = $("estado-lista");
     caja.replaceChildren();
     caja.className = `estado-lista ${tipo}`;
@@ -316,12 +319,12 @@ function mostrarEstadoLista(tipo, texto, conReintento = false) {
     parrafo.textContent = texto;
     caja.append(parrafo);
 
-    if (conReintento) {
+    if (alReintentar) {
         const boton = document.createElement("button");
         boton.type = "button";
         boton.className = "boton secundario pequeno";
         boton.textContent = "Reintentar";
-        boton.addEventListener("click", recargar);
+        boton.addEventListener("click", alReintentar);
         caja.append(boton);
     }
 }
@@ -353,7 +356,7 @@ async function cargarTransferencias(version) {
         if (version !== estado.version) return;
         lista.replaceChildren();
         $("contador").textContent = "";
-        mostrarEstadoLista("error", `No se pudo cargar el historial: ${error.message}`, true);
+        mostrarEstadoLista("error", `No se pudo cargar el historial: ${error.message}`, recargar);
     } finally {
         if (version === estado.version) lista.setAttribute("aria-busy", "false");
     }
@@ -591,6 +594,168 @@ function invertirMonedas() {
 
 
 // -----------------------------------------------------
+// PERSONAS
+// -----------------------------------------------------
+
+// Pide las personas al servidor y repinta el selector y la lista de "Personas".
+async function cargarPersonas() {
+    estado.personas = await api("/personas");
+    const nombres = estado.personas.map((p) => p.nombre);
+
+    // Si la persona elegida ya no existe (se eliminó), se usa la guardada o la primera.
+    if (!nombres.includes(estado.persona)) {
+        const guardada = leerPreferencia("persona");
+        estado.persona = nombres.includes(guardada) ? guardada : nombres[0];
+    }
+    pintarSelectorPersonas();
+    pintarListaPersonas();
+}
+
+function pintarSelectorPersonas() {
+    const selector = $("selector-personas");
+    const leyenda = selector.querySelector("legend");
+    const opciones = estado.personas.flatMap((p) => {
+        const radio = document.createElement("input");
+        radio.type = "radio";
+        radio.name = "persona";
+        radio.id = `persona-${p.id}`;
+        radio.value = p.nombre;
+        radio.checked = p.nombre === estado.persona;
+        radio.addEventListener("change", () => elegirPersona(p.nombre));
+
+        const etiqueta = document.createElement("label");
+        etiqueta.htmlFor = radio.id;
+        etiqueta.textContent = p.nombre;
+        return [radio, etiqueta];
+    });
+    selector.replaceChildren(leyenda, ...opciones);
+}
+
+function elegirPersona(nombre) {
+    estado.persona = nombre;
+    guardarPreferencia("persona", nombre);
+    recargar();
+}
+
+function pintarListaPersonas() {
+    const unica = estado.personas.length === 1;
+
+    $("lista-personas").replaceChildren(...estado.personas.map((p) => {
+        const fila = $("plantilla-persona").content.firstElementChild.cloneNode(true);
+        fila.dataset.id = p.id;
+        fila.dataset.nombre = p.nombre;
+        fila.querySelector(".fila-persona-nombre").textContent = p.nombre;
+
+        const n = p.transferencias;
+        let detalle = `Objetivo ${formatearDinero(p.objetivo, "EUR")} · ${n === 1 ? "1 transferencia" : `${n} transferencias`}`;
+
+        // Mismas reglas que el servidor: no se elimina a quien tiene
+        // transferencias ni a la última persona.
+        const eliminar = fila.querySelector("[data-accion=eliminar-persona]");
+        if (n > 0 || unica) {
+            eliminar.disabled = true;
+            detalle += n > 0 ? " · no se puede eliminar" : " · es la única persona";
+        }
+        eliminar.setAttribute("aria-label", `Eliminar a ${p.nombre}`);
+        fila.querySelector("[data-accion=renombrar]").setAttribute("aria-label", `Renombrar a ${p.nombre}`);
+        fila.querySelector(".fila-persona-detalle").textContent = detalle;
+        return fila;
+    }));
+}
+
+async function accionPersonas(evento) {
+    const boton = evento.target.closest("[data-accion]");
+    if (!boton) return;
+    const fila = boton.closest(".fila-persona");
+
+    if (boton.dataset.accion === "renombrar") abrirRenombrar(fila);
+    if (boton.dataset.accion === "cancelar-persona") pintarListaPersonas();
+    if (boton.dataset.accion === "eliminar-persona") await eliminarPersona(fila, boton);
+}
+
+function abrirRenombrar(fila) {
+    const formulario = $("plantilla-renombrar").content.firstElementChild.cloneNode(true);
+    const campo = formulario.elements.nombre;
+    campo.id = `renombrar-${fila.dataset.id}`;
+    formulario.querySelector("label").htmlFor = campo.id;
+    campo.value = fila.dataset.nombre;
+
+    formulario.addEventListener("submit", (evento) => guardarNombre(evento, fila.dataset.id, fila.dataset.nombre));
+    fila.replaceChildren(formulario);
+    campo.select();
+}
+
+async function guardarNombre(evento, id, nombreAnterior) {
+    evento.preventDefault();
+    const formulario = evento.target;
+    const nombre = formulario.elements.nombre.value.trim();
+    const error = formulario.querySelector(".error-campo");
+
+    if (!nombre) {
+        error.textContent = "Escribe un nombre";
+        return;
+    }
+
+    const restaurar = ocupar(evento.submitter || formulario.querySelector("[type=submit]"), "Guardando…");
+    try {
+        const persona = await api(`/personas/${id}`, { metodo: "PUT", datos: { nombre } });
+        if (estado.persona === nombreAnterior) {
+            estado.persona = persona.nombre;
+            guardarPreferencia("persona", persona.nombre);
+        }
+        avisar("Nombre actualizado");
+        await cargarPersonas();
+        recargar();
+    } catch (e) {
+        error.textContent = e.message;
+        restaurar();
+    }
+}
+
+async function eliminarPersona(fila, boton) {
+    if (!confirm(`¿Eliminar a ${fila.dataset.nombre}? No se puede deshacer.`)) return;
+
+    const restaurar = ocupar(boton, "Eliminando…");
+    try {
+        await api(`/personas/${fila.dataset.id}`, { metodo: "DELETE" });
+        avisar(`Persona eliminada: ${fila.dataset.nombre}`);
+        await cargarPersonas();   // si era la persona elegida, pasa a la primera
+        recargar();
+    } catch (error) {
+        avisar(error.message, "error");
+        restaurar();
+    }
+}
+
+async function agregarPersona(evento) {
+    evento.preventDefault();
+    const nombre = $("nombre-persona");
+    const objetivo = $("objetivo-persona");
+    limpiarErrorCampo(nombre, "error-persona");
+
+    if (!nombre.value.trim()) {
+        return mostrarErrorCampo(nombre, "error-persona", "Escribe un nombre");
+    }
+
+    const restaurar = ocupar($("btn-persona"), "Guardando…");
+    try {
+        const persona = await api("/personas", {
+            metodo: "POST",
+            datos: { nombre: nombre.value, objetivo: objetivo.value },
+        });
+        avisar(`Persona añadida: ${persona.nombre}`);
+        nombre.value = "";
+        objetivo.value = "";
+        await cargarPersonas();
+    } catch (error) {
+        mostrarErrorCampo(nombre, "error-persona", error.message);
+    } finally {
+        restaurar();
+    }
+}
+
+
+// -----------------------------------------------------
 // FILTROS
 // -----------------------------------------------------
 
@@ -617,14 +782,6 @@ document.addEventListener("DOMContentLoaded", () => {
     $("form-login").addEventListener("submit", entrar);
     $("btn-logout").addEventListener("click", salir);
 
-    for (const radio of document.querySelectorAll("input[name=persona]")) {
-        radio.addEventListener("change", () => {
-            estado.persona = radio.value;
-            guardarPreferencia("persona", radio.value);
-            recargar();
-        });
-    }
-
     $("moneda").addEventListener("change", (evento) => {
         estado.moneda = evento.target.value;
         guardarPreferencia("moneda", estado.moneda);
@@ -641,6 +798,8 @@ document.addEventListener("DOMContentLoaded", () => {
     $("form-conversor").addEventListener("submit", convertirCantidad);
     $("btn-invertir").addEventListener("click", invertirMonedas);
     $("lista-transferencias").addEventListener("click", accionLista);
+    $("form-persona").addEventListener("submit", agregarPersona);
+    $("lista-personas").addEventListener("click", accionPersonas);
 
     iniciar();
 });

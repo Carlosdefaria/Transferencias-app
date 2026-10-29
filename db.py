@@ -147,6 +147,73 @@ def guardar_objetivo(conn, persona, objetivo):
              (objetivo, persona))
 
 
+# Las transferencias guardan el nombre de la persona (no su id), así que
+# para saber cuántas tiene cada una se cruzan las tablas por el nombre.
+_SELECT_PERSONAS = """
+    SELECT c.id, c.persona, c.objetivo_total, COUNT(t.id)
+    FROM config c
+    LEFT JOIN transferencias t ON t.persona = c.persona
+"""
+
+
+def _fila_a_persona(fila):
+    return {
+        "id": fila[0],
+        "nombre": fila[1],
+        "objetivo": a_decimal(fila[2] or 0),
+        "transferencias": fila[3],
+    }
+
+
+def listar_personas(conn):
+    filas = ejecutar(conn, _SELECT_PERSONAS + """
+        GROUP BY c.id, c.persona, c.objetivo_total
+        ORDER BY c.id
+    """).fetchall()
+    return [_fila_a_persona(fila) for fila in filas]
+
+
+def obtener_persona(conn, id):
+    fila = ejecutar(conn, _SELECT_PERSONAS + """
+        WHERE c.id = %s
+        GROUP BY c.id, c.persona, c.objetivo_total
+    """, (id,)).fetchone()
+    return _fila_a_persona(fila) if fila else None
+
+
+def existe_persona(conn, nombre, excepto_id=None):
+    """True si ya hay otra persona con ese nombre (sin distinguir mayúsculas)."""
+    fila = ejecutar(conn,
+                    "SELECT id FROM config WHERE LOWER(persona) = LOWER(%s) AND id <> %s",
+                    (nombre, excepto_id or 0)).fetchone()
+    return fila is not None
+
+
+def contar_personas(conn):
+    return ejecutar(conn, "SELECT COUNT(*) FROM config").fetchone()[0]
+
+
+def insertar_persona(conn, nombre, objetivo):
+    return ejecutar(conn,
+                    "INSERT INTO config (persona, objetivo_total) VALUES (%s, %s) RETURNING id",
+                    (nombre, objetivo)).fetchone()[0]
+
+
+def renombrar_persona(conn, id, nombre_actual, nombre_nuevo):
+    """Cambia el nombre en config y en todas sus transferencias.
+
+    Las dos consultas van en la misma transacción (la de conexion()): o se
+    cambian las dos o ninguna, y nunca quedan transferencias "huérfanas".
+    """
+    ejecutar(conn, "UPDATE transferencias SET persona = %s WHERE persona = %s",
+             (nombre_nuevo, nombre_actual))
+    ejecutar(conn, "UPDATE config SET persona = %s WHERE id = %s", (nombre_nuevo, id))
+
+
+def eliminar_persona(conn, id):
+    ejecutar(conn, "DELETE FROM config WHERE id = %s", (id,))
+
+
 def listar_transferencias(conn, persona, desde, hasta):
     filas = ejecutar(conn, """
         SELECT id, monto, fecha, descripcion, persona, confirmada
