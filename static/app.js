@@ -84,7 +84,8 @@ function avisar(texto, tipo = "exito") {
     const aviso = document.createElement("div");
     aviso.className = `aviso-flotante ${tipo}`;
     aviso.textContent = texto;
-    const contenedor = $("avisos");
+    // Con la ventana de personas abierta, el aviso se muestra dentro de ella.
+    const contenedor = document.querySelector("dialog[open] .avisos") || $("avisos");
     contenedor.append(aviso);
     // Como mucho 3 avisos a la vez: se quitan los más antiguos.
     while (contenedor.children.length > 3) contenedor.firstElementChild.remove();
@@ -799,6 +800,16 @@ document.addEventListener("DOMContentLoaded", () => {
     $("btn-invertir").addEventListener("click", invertirMonedas);
     $("lista-transferencias").addEventListener("click", accionLista);
     $("form-persona").addEventListener("submit", agregarPersona);
+
+    const dialogo = $("dialogo-personas");
+    $("btn-personas").addEventListener("click", () => dialogo.showModal());
+    $("btn-cerrar-personas").addEventListener("click", () => dialogo.close());
+    // Un clic en el fondo oscuro (fuera del contenido) también la cierra.
+    dialogo.addEventListener("click", (evento) => {
+        if (evento.target === dialogo) dialogo.close();
+    });
+    // Al cerrarla se descarta cualquier renombrado a medias.
+    dialogo.addEventListener("close", pintarListaPersonas);
     $("lista-personas").addEventListener("click", accionPersonas);
 
     iniciar();

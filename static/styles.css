@@ -169,6 +169,8 @@ h2 { font-size: 1.05rem; font-weight: 650; }
 
 .cabecera-titulo { font-weight: 700; font-size: 1.05rem; }
 
+.cabecera-acciones { display: flex; gap: .25rem; }
+
 /* ---------- Botones ---------- */
 .boton {
     display: inline-flex;
@@ -554,6 +556,26 @@ input[aria-invalid="true"] { border-color: var(--peligro); }
     color: var(--texto-suave);
 }
 .estado-lista.error { color: var(--peligro); }
+
+/* ---------- Ventana modal (dialog) ---------- */
+.dialogo {
+    width: min(100% - 2rem, 520px);
+    max-height: min(100dvh - 2rem, 720px);
+    padding: 1.1rem;
+    border: 1px solid var(--borde);
+    border-radius: var(--radio);
+    background: var(--superficie);
+    color: var(--texto);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, .25);
+}
+.dialogo::backdrop { background: rgba(10, 15, 25, .55); }
+
+.dialogo-cabecera {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: .5rem;
+}
 
 /* ---------- Personas ---------- */
 .lista-personas { margin: .75rem 0 1.25rem; }
