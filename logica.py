@@ -20,6 +20,7 @@ MONEDAS = ("EUR", "USD", "GBP")
 CENTIMOS = Decimal("0.01")
 MONTO_MAXIMO = Decimal("1000000")
 MAX_DESCRIPCION = 200
+MAX_NOMBRE = 40
 
 
 # ------------------------
@@ -118,6 +119,20 @@ def validar_descripcion(valor):
         raise DatosInvalidos(
             f"Descripción demasiado larga (máximo {MAX_DESCRIPCION} caracteres)")
     return valor
+
+
+def validar_nombre(valor):
+    """Nombre de persona sin espacios sobrantes, entre 1 y MAX_NOMBRE caracteres."""
+    if not isinstance(valor, str):
+        raise DatosInvalidos("Nombre obligatorio")
+    # split() + join() quita espacios del principio y del final y deja uno
+    # solo entre palabras ("  Ana   María " -> "Ana María").
+    nombre = " ".join(valor.split())
+    if not nombre:
+        raise DatosInvalidos("Nombre obligatorio")
+    if len(nombre) > MAX_NOMBRE:
+        raise DatosInvalidos(f"Nombre demasiado largo (máximo {MAX_NOMBRE} caracteres)")
+    return nombre
 
 
 def validar_moneda(valor):

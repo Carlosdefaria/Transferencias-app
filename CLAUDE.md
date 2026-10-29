@@ -6,7 +6,8 @@ App web Flask para controlar las transferencias mensuales que me envía mi padre
 - CRUD de transferencias (monto, fecha, descripción); confirmar/desconfirmar. Las confirmadas no se pueden eliminar.
 - Filtro por mes (por defecto, el actual): la lista y el resumen usan siempre el mismo mes. Totales del mes: confirmado, pendiente, objetivo, restante y barra de progreso.
 - Objetivo mensual editable por persona (`POST /objetivo`, tabla `config`).
-- Login con un único PIN compartido (`APP_PIN`, obligatorio en producción) y sesión de Flask (30 días). Máximo 5 PIN incorrectos cada 15 minutos por IP (`seguridad.limitador_login`, en memoria). Carlos y Pito no son usuarios con login propio: son "personas" que se eligen en un selector y filtran los datos.
+- Login con un único PIN compartido (`APP_PIN`, obligatorio en producción) y sesión de Flask (30 días). Máximo 5 PIN incorrectos cada 15 minutos por IP (`seguridad.limitador_login`, en memoria). Las personas no son usuarios con login propio: se eligen en un selector y filtran los datos.
+- Gestión de personas desde la app (sección "Personas"): añadir, renombrar (también cambia el nombre en sus transferencias) y eliminar. Solo se elimina a quien no tiene transferencias y nunca a la última. El selector se construye con `GET /personas`; Carlos y Pito son solo los datos iniciales (`db.PERSONAS_INICIALES`) de una BD vacía.
 - Visualización en EUR/USD/GBP con ExchangeRate-API. Las tasas se piden una vez (base EUR) y se guardan en caché 1 hora (`logica.obtener_tasas`); si la API falla, se muestra en EUR con un aviso. El conversor de la interfaz usa `/convertir`. Los importes se guardan siempre en EUR y se editan en EUR (`monto_eur`).
 
 ## Estructura
@@ -24,7 +25,7 @@ App web Flask para controlar las transferencias mensuales que me envía mi padre
 - `backup.py`: copia de seguridad local con `pg_dump` (rutas de Windows por defecto, configurables con `BACKUP_DIR`/`PG_DUMP_PATH`), conserva `BACKUP_DIAS` días y no borra nada si el backup falla.
 - `Procfile` (`web: gunicorn app:app`), `runtime.txt` (python-3.11.9), `requirements.txt` (producción, UTF-8), `requirements-dev.txt` (añade pytest), `.env.example`.
 
-Rutas: `/`, `/login`, `/check-auth`, `/logout`, `/transferencias` (GET con `persona`, `mes`, `moneda` / POST), `/transferencias/<id>` (PUT/DELETE; no se permiten sobre confirmadas → 409), `/transferencias/<id>/confirmar` (PATCH), `/resumen`, `/objetivo`, `/convertir`. Todas las de datos usan `@login_required`. Los importes viajan en JSON como texto con 2 decimales (`"1070.00"`) y las fechas como `YYYY-MM-DD`.
+Rutas: `/`, `/login`, `/check-auth`, `/logout`, `/transferencias` (GET con `persona`, `mes`, `moneda` / POST), `/transferencias/<id>` (PUT/DELETE; no se permiten sobre confirmadas → 409), `/transferencias/<id>/confirmar` (PATCH), `/resumen`, `/objetivo`, `/convertir`, `/personas` (GET/POST), `/personas/<id>` (PUT renombra / DELETE; 409 si tiene transferencias o es la última). Todas las de datos usan `@login_required`. Los importes viajan en JSON como texto con 2 decimales (`"1070.00"`) y las fechas como `YYYY-MM-DD`.
 
 ## Stack
 Python 3.11 + Flask, HTML/CSS/JS básico (sin React), SQLite (`database.db`) en desarrollo y PostgreSQL (psycopg 3) en producción, Render + Gunicorn, Git/GitHub.

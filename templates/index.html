@@ -61,12 +61,9 @@
 
         <!-- FILTROS: persona, mes y moneda -->
         <section class="controles" aria-label="Filtros">
-            <fieldset class="segmentado">
+            <!-- Los botones de cada persona los crea app.js con los datos de /personas -->
+            <fieldset id="selector-personas" class="segmentado">
                 <legend class="sr-only">Persona</legend>
-                <input type="radio" name="persona" id="persona-carlos" value="Carlos" checked>
-                <label for="persona-carlos">Carlos</label>
-                <input type="radio" name="persona" id="persona-pito" value="Pito">
-                <label for="persona-pito">Pito</label>
             </fieldset>
 
             <div class="fila-controles">
@@ -210,6 +207,32 @@
                         </form>
                     </details>
                 </section>
+
+                <!-- PERSONAS -->
+                <section class="tarjeta" aria-labelledby="titulo-personas">
+                    <details class="plegable">
+                        <summary><h2 id="titulo-personas" class="en-linea">Personas</h2></summary>
+                        <ul id="lista-personas" class="lista lista-personas"></ul>
+
+                        <form id="form-persona" class="formulario" novalidate>
+                            <h3 class="subtitulo">Añadir persona</h3>
+                            <div class="campos-linea">
+                                <div class="campo">
+                                    <label for="nombre-persona" class="etiqueta">Nombre</label>
+                                    <input id="nombre-persona" type="text" maxlength="40" required autocomplete="off"
+                                           aria-describedby="error-persona">
+                                </div>
+                                <div class="campo">
+                                    <label for="objetivo-persona" class="etiqueta">Objetivo mensual (€)</label>
+                                    <input id="objetivo-persona" type="number" inputmode="decimal" step="0.01" min="0.01"
+                                           placeholder="1070">
+                                </div>
+                            </div>
+                            <p id="error-persona" class="error-campo"></p>
+                            <button id="btn-persona" type="submit" class="boton secundario ancho">Añadir persona</button>
+                        </form>
+                    </details>
+                </section>
             </div>
         </div>
     </main>
@@ -232,6 +255,35 @@
             <button type="button" class="boton pequeno peligro" data-accion="eliminar">Eliminar</button>
         </div>
     </li>
+</template>
+
+<!-- Plantilla de una persona en "Personas" -->
+<template id="plantilla-persona">
+    <li class="fila-persona">
+        <div>
+            <p class="fila-persona-nombre"></p>
+            <p class="fila-persona-detalle texto-suave"></p>
+        </div>
+        <div class="movimiento-acciones">
+            <button type="button" class="boton pequeno secundario" data-accion="renombrar">Renombrar</button>
+            <button type="button" class="boton pequeno peligro" data-accion="eliminar-persona">Eliminar</button>
+        </div>
+    </li>
+</template>
+
+<!-- Plantilla del formulario para renombrar una persona -->
+<template id="plantilla-renombrar">
+    <form class="formulario" novalidate>
+        <div class="campo">
+            <label class="etiqueta" data-para="nombre">Nuevo nombre</label>
+            <input name="nombre" type="text" maxlength="40" required autocomplete="off">
+        </div>
+        <p class="error-campo" role="alert"></p>
+        <div class="movimiento-acciones">
+            <button type="submit" class="boton pequeno primario">Guardar</button>
+            <button type="button" class="boton pequeno secundario" data-accion="cancelar-persona">Cancelar</button>
+        </div>
+    </form>
 </template>
 
 <!-- Plantilla del formulario de edición -->

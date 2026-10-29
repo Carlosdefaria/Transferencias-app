@@ -11,7 +11,8 @@ from seguridad import limitador_login
 from logica import (Conflicto, DatosInvalidos, NoEncontrada, TasasNoDisponibles,
                     calcular_resumen, convertir, obtener_tasas, rango_mes,
                     tasa_cambio, validar_descripcion, validar_fecha,
-                    validar_mes, validar_moneda, validar_monto)
+                    validar_mes, validar_moneda, validar_monto,
+                    validar_nombre)
 
 bp = Blueprint("rutas", __name__)
 
@@ -253,6 +254,76 @@ def guardar_objetivo():
         db.guardar_objetivo(conn, data.get("persona"), objetivo)
 
     return jsonify({"mensaje": "ok", "objetivo": importe(objetivo)})
+
+
+# ------------------------
+# PERSONAS
+# ------------------------
+
+def persona_a_json(persona):
+    return {**persona, "objetivo": importe(persona["objetivo"])}
+
+
+@bp.route("/personas", methods=["GET"])
+@login_required
+def obtener_personas():
+    with db.conexion() as conn:
+        personas = db.listar_personas(conn)
+    return jsonify([persona_a_json(p) for p in personas])
+
+
+@bp.route("/personas", methods=["POST"])
+@login_required
+def crear_persona():
+    data = leer_json()
+    nombre = validar_nombre(data.get("nombre"))
+    if data.get("objetivo") in (None, ""):
+        objetivo = db.OBJETIVO_INICIAL
+    else:
+        objetivo = validar_monto(data.get("objetivo"), campo="Objetivo")
+
+    with db.conexion() as conn:
+        if db.existe_persona(conn, nombre):
+            raise Conflicto("Ya existe una persona con ese nombre")
+        nuevo_id = db.insertar_persona(conn, nombre, objetivo)
+        persona = db.obtener_persona(conn, nuevo_id)
+
+    return jsonify(persona_a_json(persona)), 201
+
+
+@bp.route("/personas/<int:id>", methods=["PUT"])
+@login_required
+def renombrar_persona(id):
+    nombre = validar_nombre(leer_json().get("nombre"))
+
+    with db.conexion() as conn:
+        persona = db.obtener_persona(conn, id)
+        if persona is None:
+            raise NoEncontrada("No existe")
+        if db.existe_persona(conn, nombre, excepto_id=id):
+            raise Conflicto("Ya existe una persona con ese nombre")
+        db.renombrar_persona(conn, id, persona["nombre"], nombre)
+        persona = db.obtener_persona(conn, id)
+
+    return jsonify(persona_a_json(persona))
+
+
+@bp.route("/personas/<int:id>", methods=["DELETE"])
+@login_required
+def eliminar_persona(id):
+    with db.conexion() as conn:
+        persona = db.obtener_persona(conn, id)
+        if persona is None:
+            raise NoEncontrada("No existe")
+        # Nunca se borra historial: solo se elimina a quien no tiene transferencias.
+        if persona["transferencias"]:
+            raise Conflicto(f"{persona['nombre']} tiene transferencias guardadas "
+                            "y no se puede eliminar")
+        if db.contar_personas(conn) <= 1:
+            raise Conflicto("Tiene que quedar al menos una persona")
+        db.eliminar_persona(conn, id)
+
+    return jsonify({"mensaje": "ok"})
 
 
 # ------------------------

@@ -298,7 +298,8 @@ input[aria-invalid="true"] { border-color: var(--peligro); }
 
 .segmentado {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    /* Tantas columnas como personas quepan; si no caben, pasan a otra fila */
+    grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
     gap: 4px;
     margin: 0;
     padding: 4px;
@@ -553,6 +554,19 @@ input[aria-invalid="true"] { border-color: var(--peligro); }
     color: var(--texto-suave);
 }
 .estado-lista.error { color: var(--peligro); }
+
+/* ---------- Personas ---------- */
+.lista-personas { margin: .75rem 0 1.25rem; }
+
+.fila-persona {
+    padding: .75rem .9rem;
+    border: 1px solid var(--borde);
+    border-radius: var(--radio-pequeno);
+}
+.fila-persona-nombre { font-weight: 700; overflow-wrap: anywhere; }
+.fila-persona-detalle { margin-top: .1rem; }
+
+.subtitulo { font-size: 1rem; font-weight: 650; }
 
 /* ---------- Conversor ---------- */
 .conversor-fila {
