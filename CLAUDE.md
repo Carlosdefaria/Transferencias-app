@@ -13,15 +13,15 @@ App web Flask para controlar las transferencias mensuales que me envía mi padre
 - `app.py`: toda la app (configuración, conexión a BD, creación de tablas, rutas JSON).
 - `templates/index.html`: interfaz y JS (llamadas `fetch` a la API).
 - `static/styles.css`: estilos.
-- `backup.py`: copia de seguridad local con `pg_dump` (rutas de Windows), conserva 7 días.
-- `Procfile` (`web: gunicorn app:app`), `runtime.txt` (python-3.11.9), `requirements.txt`.
+- `backup.py`: copia de seguridad local con `pg_dump` (rutas de Windows por defecto, configurables con `BACKUP_DIR`/`PG_DUMP_PATH`), conserva `BACKUP_DIAS` días y no borra nada si el backup falla.
+- `Procfile` (`web: gunicorn app:app`), `runtime.txt` (python-3.11.9), `requirements.txt` (producción, UTF-8), `requirements-dev.txt` (añade pytest), `.env.example`.
 
 Rutas: `/`, `/login`, `/check-auth`, `/logout`, `/transferencias` (GET/POST), `/transferencias/<id>` (PUT/DELETE), `/transferencias/<id>/confirmar` (PATCH), `/resumen`, `/objetivo`. Todas las de datos usan `@login_required`.
 
 ## Stack
 Python 3.11 + Flask, HTML/CSS/JS básico (sin React), SQLite (`database.db`) en desarrollo y PostgreSQL (psycopg 3) en producción, Render + Gunicorn, Git/GitHub.
 
-Variables en `.env` (python-dotenv): `SECRET_KEY` (obligatoria), `DATABASE_URL` (si falta, se usa SQLite), `APP_PIN` (por defecto `1234`), `DB_PASSWORD` (solo `backup.py`).
+Variables en `.env` (python-dotenv): `SECRET_KEY` (obligatoria), `DATABASE_URL` (si falta, se usa SQLite), `APP_PIN` (por defecto `1234`), `DB_PASSWORD`, `BACKUP_DIR`, `PG_DUMP_PATH`, `BACKUP_DIAS` (solo `backup.py`). Plantilla en `.env.example`.
 
 Las consultas se escriben con `%s` y se ejecutan con `ejecutar()`, que las adapta a `?` en SQLite. Cualquier SQL nuevo debe funcionar en ambos motores.
 
