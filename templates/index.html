@@ -1,684 +1,255 @@
-    <!DOCTYPE html>
-    <html lang="es">
-    <head>
-        <meta charset="UTF-8">
-        <title>Control de Transferencias</title>
-        <link rel="stylesheet" href="/static/styles.css">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    </head>
-    <body>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" content="#f4f6fa" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0f1420" media="(prefers-color-scheme: dark)">
+    <title>Control de Transferencias</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+</head>
+<body>
 
-    <!-- LOGIN -->
-    <div id="login-container" class="login">
-        <h2>Acceso</h2>
-        <input type="password" id="pin" placeholder="Introduce PIN">
-        <button onclick="login()">Entrar</button>
-    </div>
+<a class="saltar" href="#principal">Saltar al contenido</a>
 
-    <!-- APP -->
-    <div id="app" style="display:none;">
+<!-- Avisos temporales (éxito / error). aria-live hace que un lector de pantalla los lea. -->
+<div id="avisos" class="avisos" role="status" aria-live="polite"></div>
 
-    <div class="container">
+<!-- Pantalla mientras se comprueba la sesión -->
+<div id="vista-carga" class="vista-carga" aria-busy="true">
+    <span class="spinner" aria-hidden="true"></span>
+    <span class="sr-only">Cargando…</span>
+</div>
 
+<!-- LOGIN -->
+<main id="vista-login" class="vista-login" hidden>
+    <form id="form-login" class="tarjeta login-tarjeta" novalidate>
+        <div class="logo" aria-hidden="true">€</div>
         <h1>Control de Transferencias</h1>
-        <p id="mensaje"></p>
+        <p class="texto-suave">Introduce el PIN para continuar</p>
 
-        <p class="usuario-activo">
-        Estás viendo: <strong id="nombre-usuario">Carlos</strong>
-        </p>
+        <label for="pin" class="etiqueta">PIN</label>
+        <input id="pin" name="pin" type="password" inputmode="numeric"
+               autocomplete="current-password" required aria-describedby="error-login">
+        <p id="error-login" class="error-campo" role="alert"></p>
 
-        <button onclick="logout()" class="secondary" style="margin-bottom:20px;">
-            Cerrar sesión
-        </button>
+        <button type="submit" class="boton primario ancho">Entrar</button>
+    </form>
+</main>
 
-        <div class="card">
-            <h2>Cuenta</h2>
-            <select id="persona" onchange="cambiarPersona()">
-                <option value="Carlos">Carlos</option>
-                <option value="Pito">Pito</option>
-            </select>
+<!-- APP -->
+<div id="vista-app" hidden>
+    <header class="cabecera">
+        <div class="cabecera-interior">
+            <p class="cabecera-titulo">Transferencias</p>
+            <button id="btn-logout" type="button" class="boton fantasma pequeno">Cerrar sesión</button>
         </div>
+    </header>
 
-        <div class="card">
-        <h2>Moneda</h2>
+    <main id="principal" class="contenedor">
+        <h1 class="sr-only">Control de Transferencias</h1>
 
-        <select id="moneda" onchange="recargar()">
-            <option value="EUR">EUR (€)</option>
-            <option value="USD">USD ($)</option>
-            <option value="GBP">GBP (£)</option>
-        </select>
-        </div>
+        <!-- FILTROS: persona, mes y moneda -->
+        <section class="controles" aria-label="Filtros">
+            <fieldset class="segmentado">
+                <legend class="sr-only">Persona</legend>
+                <input type="radio" name="persona" id="persona-carlos" value="Carlos" checked>
+                <label for="persona-carlos">Carlos</label>
+                <input type="radio" name="persona" id="persona-pito" value="Pito">
+                <label for="persona-pito">Pito</label>
+            </fieldset>
 
-        <div class="card">
-        <h2>Conversor de moneda</h2>
+            <div class="fila-controles">
+                <div class="selector-mes">
+                    <button id="mes-anterior" type="button" class="boton icono" aria-label="Mes anterior">‹</button>
+                    <label for="filtro-mes" class="sr-only">Mes</label>
+                    <input type="month" id="filtro-mes" required>
+                    <button id="mes-siguiente" type="button" class="boton icono" aria-label="Mes siguiente">›</button>
+                </div>
+                <button id="btn-mes-actual" type="button" class="boton secundario pequeno">Mes actual</button>
 
-        <input type="number" id="cantidad" placeholder="Cantidad a convertir" step="any">
-
-        <div class="conversor-row">
-            <div class="campo">
-                <label>De</label>
-                <select id="de">
-                    <option value="EUR">EUR</option>
-                    <option value="USD">USD</option>
-                    <option value="GBP">GBP</option>
+                <label for="moneda" class="sr-only">Moneda de visualización</label>
+                <select id="moneda" class="selector-moneda">
+                    <option value="EUR">EUR €</option>
+                    <option value="USD">USD $</option>
+                    <option value="GBP">GBP £</option>
                 </select>
             </div>
-
-            <button class="swap-btn" onclick="invertirMonedas()">⇄</button>
-
-            <div class="campo">
-                <label>A</label>
-                <select id="a">
-                    <option value="USD">USD</option>
-                    <option value="EUR">EUR</option>
-                    <option value="GBP">GBP</option>
-                </select>
-            </div>
-        </div>
-
-        <button onclick="convertirMoneda()" style="margin-top:15px;">
-            Convertir
-        </button>
-
-        <p id="resultado-conversion"></p>
-        <small id="tasa-info"></small>
-    </div>
-
-        <div class="card">
-            <h2>Filtrar por mes</h2>
-            <input type="month" id="filtro-mes">
-            <button onclick="aplicarFiltro()">Aplicar filtro</button>
-            <button class="secondary" onclick="limpiarFiltro()">Mes actual</button>
-        </div>
-
-        <div class="card">
-            <h2>Resumen</h2>
-            <p>Objetivo a alcanzar: <span id="objetivo">0</span></p>
-            <p>Total confirmado: <span id="confirmado">0</span></p>
-            <p>Restante para llegar al objetivo: <span id="restante">0</span></p>
-            <p>Transferencias hechas aún no recibidas: <span id="pendiente">0</span></p>
-        
-            <h3>Progreso</h3>
-            <div id="barra-container">
-                <div id="barra-progreso"></div>
-            </div>
-            <p id="texto-progreso"></p>
-        </div>
-        
-
-
-        <div class="card">
-            <h2>Actualizar objetivo</h2>
-
-            <input type="number" id="nuevo-objetivo" placeholder="Nuevo objetivo (€)" step="0.01">
-            <button id="btn-objetivo" onclick="guardarObjetivo()">Guardar objetivo</button>
-        </div>
-
-
-        
-        <div class="card">
-            <h2>Agregar transferencia</h2>
-            <input type="number" id="monto" placeholder="Monto (€)" step="0.01">
-            <input type="date" id="fecha">
-            <input type="text" id="descripcion" placeholder="Descripción">
-            <button id="btn-agregar" onclick="agregarTransferencia()">Agregar</button>
-        </div>
-
-        <div class="card">
-            <h2>Historial</h2>
-            <ul id="lista-transferencias"></ul>
-        </div>
-
-    </div>
-    </div>
-
-    <script>
-
-        async function logout() {
-    try {
-        await apiRequest("/logout", {
-            method: "POST",
-            credentials: "include"
-        });
-
-        // Volver a login
-        document.getElementById("app").style.display = "none";
-        document.getElementById("login-container").style.display = "block";
-
-    } catch (error) {
-        // ya manejado
-    }
-}
-
-async function apiRequest(url, options = {}) {
-    try {
-        const res = await fetch(url, {
-            credentials: "include",
-            ...options
-        });
-
-        let data = null;
-
-        try {
-            data = await res.json();
-        } catch {}
-
-        if (!res.ok) {
-            throw new Error(data?.error || "Error en la petición");
-        }
-
-        return data;
-
-    } catch (error) {
-        mostrarMensaje(error.message, "error");
-        throw error;
-    }
-}
-
-    async function convertirMoneda() {
-        const cantidad = parseFloat(document.getElementById("cantidad").value);
-        const de = document.getElementById("de").value;
-        const a = document.getElementById("a").value;
-        const resultadoElem = document.getElementById("resultado-conversion");
-
-        if (isNaN(cantidad) || cantidad <= 0) {
-            mostrarMensaje("Introduce una cantidad válida", "error");
-            return;
-        }
-
-        if (de === a) {
-            resultadoElem.innerText =
-                `${cantidad} ${de} → ${cantidad.toFixed(2)} ${a}`;
-            return;
-        }
-
-        try {
-            resultadoElem.innerText = "Calculando...";
-
-            const data = await apiRequest(`/convertir?cantidad=${cantidad}&de=${de}&a=${a}`);
-
-            resultadoElem.innerText =
-                `${cantidad} ${de} → ${formatearDinero(data.resultado)} ${a}`;
-
-            document.getElementById("tasa-info").innerText =
-                `1 ${de} = ${data.tasa} ${a}`;
-
-        } catch (error) {
-            resultadoElem.innerText = "Error al obtener tasa de cambio";
-        }
-    }
-
-    function obtenerSimbolo(moneda) {
-        if (moneda === "EUR") return "€";
-        if (moneda === "USD") return "$";
-        if (moneda === "GBP") return "£";
-        return "";
-    }
-
-    function invertirMonedas() {
-        const de = document.getElementById("de");
-        const a = document.getElementById("a");
-
-        const temp = de.value;
-        de.value = a.value;
-        a.value = temp;
-    }
-
-    async function login() {
-    const pin = document.getElementById("pin").value;
-
-    const response = await fetch("/login", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        credentials: "include", // 🔥 CLAVE
-        body: JSON.stringify({ pin })
-    });
-
-    if (response.ok) {
-        iniciarApp();
-    } else {
-        mostrarMensaje("PIN incorrecto", "error");
-    }
-}
-
-    function mostrarMensaje(texto, tipo = "exito") {
-        const mensaje = document.getElementById("mensaje");
-
-        mensaje.className = `mensaje ${tipo}`;
-        mensaje.innerText = texto;
-
-        setTimeout(() => {
-            mensaje.innerText = "";
-            mensaje.className = "";
-        }, 4000);
-    }
-
-    function formatearDinero(valor) {
-        return new Intl.NumberFormat('es-ES', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        }).format(Number(valor) || 0);
-    }
-
-    // Evita que una descripción con HTML se ejecute al insertarla en la página
-    function escaparHTML(texto) {
-        const reemplazos = {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"};
-        return String(texto ?? "").replace(/[&<>"']/g, c => reemplazos[c]);
-    }
-
-    // "2026-10-05" → "05/10/2026" sin pasar por Date (evita desfases de zona horaria)
-    function formatearFecha(iso) {
-        const [anio, mes, dia] = iso.split("-");
-        return `${dia}/${mes}/${anio}`;
-    }
-
-    function mesActual() {
-        const hoy = new Date();
-        return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}`;
-    }
-
-    function recargar() {
-        cargarResumen();
-        cargarTransferencias();
-    }
-
-    function getPersonaSeleccionada() {
-        return document.getElementById("persona").value;
-    }
-
-    let personaSeleccionada = "Carlos";
-
-    function cambiarPersona() {
-        const select = document.getElementById("persona");
-        personaSeleccionada = select.value;
-
-        document.getElementById("nombre-usuario").innerText = personaSeleccionada;
-
-        cargarResumen();
-        cargarTransferencias();
-    }
-
-    function ponerFechaHoy() {
-        const hoy = new Date();
-
-        const year = hoy.getFullYear();
-        const month = String(hoy.getMonth() + 1).padStart(2, '0');
-        const day = String(hoy.getDate()).padStart(2, '0');
-
-        document.getElementById("fecha").value = `${year}-${month}-${day}`;
-    }
-
-    // El resumen y la lista usan siempre el mismo mes (por defecto, el actual)
-    let mesSeleccionado = mesActual();
-
-    function aplicarFiltro() {
-        const input = document.getElementById("filtro-mes").value;
-        if (!input) return;
-
-        mesSeleccionado = input;
-        cargarResumen();
-        cargarTransferencias();
-    }
-
-    function limpiarFiltro() {
-        mesSeleccionado = mesActual();
-        document.getElementById("filtro-mes").value = mesSeleccionado;
-        cargarResumen();
-        cargarTransferencias();
-    }
-
-    async function cargarResumen() {
-        let persona = getPersonaSeleccionada();
-        let moneda = document.getElementById("moneda").value;
-        const data = await apiRequest(`/resumen?persona=${persona}&moneda=${moneda}&mes=${mesSeleccionado}`);
-        const simbolo = obtenerSimbolo(data.moneda);
-        if (data.aviso) mostrarMensaje(data.aviso, "error");
-
-        document.getElementById("confirmado").innerText = formatearDinero(data.total_confirmado) + " " + simbolo;
-        document.getElementById("objetivo").innerText = formatearDinero(data.objetivo) + " " + simbolo;
-        document.getElementById("restante").innerText = formatearDinero(data.restante) + " " + simbolo;
-        document.getElementById("pendiente").innerText = formatearDinero(data.pendiente) + " " + simbolo;
-
-        const restanteElem = document.getElementById("restante");
-        restanteElem.style.color = data.restante <= 0 ? "green" : "red";
-        document.getElementById("pendiente").style.color = "orange";
-
-        let porcentaje = data.porcentaje;
-
-        if (porcentaje > 100) porcentaje = 100;
-
-        const barra = document.getElementById("barra-progreso");
-        barra.style.width = porcentaje + "%";
-
-        if (porcentaje < 40) {
-            barra.style.backgroundColor = "red";
-        } else if (porcentaje < 80) {
-            barra.style.backgroundColor = "orange";
-        } else {
-            barra.style.backgroundColor = "green";
-        }
-
-        document.getElementById("texto-progreso").innerText =
-            `${formatearDinero(data.total_confirmado)} ${simbolo} / ${formatearDinero(data.objetivo)} ${simbolo}`;
-    }
-
-async function cargarTransferencias() {
-    const persona = getPersonaSeleccionada();
-    const moneda = document.getElementById("moneda").value;
-
-    const data = await apiRequest(`/transferencias?persona=${persona}&moneda=${moneda}&mes=${mesSeleccionado}`);
-    const simbolo = obtenerSimbolo(data.moneda);
-
-    const lista = document.getElementById("lista-transferencias");
-    lista.innerHTML = "";
-
-    data.transferencias.forEach(t => {
-        const item = document.createElement("li");
-        item.id = `transferencia-${t.id}`;
-        item.dataset.confirmada = t.confirmada;
-        // Valores originales (en EUR) para el formulario de edición
-        item.dataset.montoEur = t.monto_eur;
-        item.dataset.fecha = t.fecha;
-        item.dataset.descripcion = t.descripcion;
-
-        const fecha = formatearFecha(t.fecha);
-
-        item.innerHTML = `
-            <div class="transferencia">
-                
-                <div class="transferencia-info">
-                    <div class="linea-principal">
-                        <span class="transferencia-monto">
-                            ${formatearDinero(t.monto)} ${simbolo}
-                        </span>
-
-                        <span class="transferencia-fecha">
-                            ${fecha}
-                        </span>
+        </section>
+
+        <div class="rejilla">
+            <div class="columna">
+                <!-- RESUMEN DEL MES -->
+                <section id="resumen" class="tarjeta resumen" aria-labelledby="titulo-resumen" aria-busy="true">
+                    <h2 id="titulo-resumen" class="resumen-titulo">Resumen</h2>
+
+                    <p id="aviso-moneda" class="aviso" hidden></p>
+
+                    <div class="resumen-principal">
+                        <p id="restante-etiqueta" class="etiqueta-dato">Falta por recibir</p>
+                        <p id="restante" class="dato-grande">–</p>
+                        <p id="restante-detalle" class="texto-suave"></p>
                     </div>
 
-                    <span class="transferencia-desc">
-                        ${escaparHTML(t.descripcion) || "Sin descripción"}
-                    </span>
-                </div>
+                    <div id="barra" class="barra" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+                         aria-valuenow="0" aria-labelledby="texto-progreso">
+                        <span id="barra-confirmado" class="barra-confirmado"></span>
+                        <span id="barra-pendiente" class="barra-pendiente"></span>
+                    </div>
+                    <p id="texto-progreso" class="texto-progreso">–</p>
 
-                <div class="transferencia-acciones">
+                    <dl class="cifras">
+                        <div class="cifra cifra-confirmado">
+                            <dt><span class="punto" aria-hidden="true"></span>Confirmado</dt>
+                            <dd id="confirmado">–</dd>
+                        </div>
+                        <div class="cifra cifra-pendiente">
+                            <dt><span class="punto" aria-hidden="true"></span>Pendiente</dt>
+                            <dd id="pendiente">–</dd>
+                        </div>
+                        <div class="cifra cifra-objetivo">
+                            <dt>Objetivo</dt>
+                            <dd id="objetivo">–</dd>
+                        </div>
+                    </dl>
 
-                ${!t.confirmada ? `
-                    <button onclick="editarTransferencia(${t.id})">
-                        Editar
-                    </button>
-                ` : ""}
+                    <details class="plegable">
+                        <summary>Cambiar objetivo mensual</summary>
+                        <form id="form-objetivo" class="formulario" novalidate>
+                            <div class="campo">
+                                <label for="nuevo-objetivo" class="etiqueta">Nuevo objetivo (€)</label>
+                                <input id="nuevo-objetivo" type="number" inputmode="decimal" step="0.01" min="0.01"
+                                       required aria-describedby="error-objetivo">
+                                <p id="error-objetivo" class="error-campo"></p>
+                            </div>
+                            <button type="submit" class="boton secundario">Guardar objetivo</button>
+                        </form>
+                    </details>
+                </section>
 
-                <button id="btn-confirmar-${t.id}" onclick="toggleConfirmar(${t.id})">
-                    ${t.confirmada ? "Desconfirmar" : "Confirmar"}
-                </button>
-
-                ${!t.confirmada ? `
-                    <button id="btn-eliminar-${t.id}" class="btn-eliminar" onclick="eliminarTransferencia(${t.id})">X</button>
-                ` : ""}
-
+                <!-- NUEVA TRANSFERENCIA -->
+                <section class="tarjeta" aria-labelledby="titulo-nueva">
+                    <h2 id="titulo-nueva">Nueva transferencia</h2>
+                    <form id="form-nueva" class="formulario" novalidate>
+                        <div class="campos-linea">
+                            <div class="campo">
+                                <label for="monto" class="etiqueta">Monto (€)</label>
+                                <input id="monto" type="number" inputmode="decimal" step="0.01" min="0.01"
+                                       required aria-describedby="error-monto">
+                                <p id="error-monto" class="error-campo"></p>
+                            </div>
+                            <div class="campo">
+                                <label for="fecha" class="etiqueta">Fecha</label>
+                                <input id="fecha" type="date" required aria-describedby="error-fecha">
+                                <p id="error-fecha" class="error-campo"></p>
+                            </div>
+                        </div>
+                        <div class="campo">
+                            <label for="descripcion" class="etiqueta">Descripción <span class="texto-suave">(opcional)</span></label>
+                            <input id="descripcion" type="text" maxlength="200" autocomplete="off">
+                        </div>
+                        <button id="btn-agregar" type="submit" class="boton primario ancho">Añadir transferencia</button>
+                    </form>
+                </section>
             </div>
 
+            <div class="columna">
+                <!-- HISTORIAL -->
+                <section class="tarjeta" aria-labelledby="titulo-historial">
+                    <div class="tarjeta-cabecera">
+                        <h2 id="titulo-historial">Historial del mes</h2>
+                        <span id="contador" class="contador"></span>
+                    </div>
+                    <div id="estado-lista" class="estado-lista" aria-live="polite"></div>
+                    <ul id="lista-transferencias" class="lista" aria-busy="true"></ul>
+                </section>
+
+                <!-- CONVERSOR -->
+                <section class="tarjeta" aria-labelledby="titulo-conversor">
+                    <details class="plegable">
+                        <summary><h2 id="titulo-conversor" class="en-linea">Conversor de moneda</h2></summary>
+                        <form id="form-conversor" class="formulario" novalidate>
+                            <div class="campo">
+                                <label for="cantidad" class="etiqueta">Cantidad</label>
+                                <input id="cantidad" type="number" inputmode="decimal" step="0.01" min="0.01" required>
+                            </div>
+                            <div class="conversor-fila">
+                                <div class="campo">
+                                    <label for="de" class="etiqueta">De</label>
+                                    <select id="de">
+                                        <option value="EUR">EUR</option>
+                                        <option value="USD">USD</option>
+                                        <option value="GBP">GBP</option>
+                                    </select>
+                                </div>
+                                <button id="btn-invertir" type="button" class="boton icono" aria-label="Intercambiar monedas">⇄</button>
+                                <div class="campo">
+                                    <label for="a" class="etiqueta">A</label>
+                                    <select id="a">
+                                        <option value="USD">USD</option>
+                                        <option value="EUR">EUR</option>
+                                        <option value="GBP">GBP</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="submit" class="boton secundario ancho">Convertir</button>
+                            <div class="resultado-conversion" aria-live="polite">
+                                <p id="resultado-conversion" class="dato-medio"></p>
+                                <p id="tasa-info" class="texto-suave"></p>
+                            </div>
+                        </form>
+                    </details>
+                </section>
             </div>
-        `;
-
-        if (t.confirmada) {
-            item.style.backgroundColor = "#d4edda";
-        }
-
-        lista.appendChild(item);
-    });
-}
-
-function editarTransferencia(id) {
-    const item = document.getElementById(`transferencia-${id}`);
-
-    // Se usan los datos originales guardados en el elemento, no el texto
-    // mostrado (que puede estar convertido a otra moneda).
-    const monto = item.dataset.montoEur;
-    const fecha = item.dataset.fecha;
-    const desc = escaparHTML(item.dataset.descripcion);
-
-    item.innerHTML = `
-        <div class="transferencia editando">
-            
-            <div class="transferencia-info">
-                
-                <div class="linea-principal">
-                    <input type="number" step="0.01" id="edit-monto-${id}" value="${monto}" class="input-edit small" aria-label="Monto en euros" title="Monto en euros">
-                    <input type="date" id="edit-fecha-${id}" value="${fecha}" class="input-edit small">
-                </div>
-
-                <input type="text" id="edit-desc-${id}" value="${desc}" class="input-edit">
-            
-            </div>
-
-            <div class="transferencia-acciones">
-                <button id="btn-guardar-${id}" onclick="guardarEdicion(${id})">
-                    Guardar
-                </button>
-                <button class="secondary" onclick="cargarTransferencias()">Cancelar</button>
-            </div>
-
         </div>
-    `;
+    </main>
+</div>
 
-    document.getElementById(`edit-monto-${id}`).focus();
-}
+<!-- Plantilla de una transferencia del historial (la rellena app.js) -->
+<template id="plantilla-transferencia">
+    <li class="movimiento">
+        <div class="movimiento-cabecera">
+            <span class="movimiento-monto"></span>
+            <span class="estado"></span>
+        </div>
+        <p class="movimiento-detalle">
+            <time class="movimiento-fecha"></time>
+            <span class="movimiento-desc"></span>
+        </p>
+        <div class="movimiento-acciones">
+            <button type="button" class="boton pequeno" data-accion="confirmar"></button>
+            <button type="button" class="boton pequeno secundario" data-accion="editar">Editar</button>
+            <button type="button" class="boton pequeno peligro" data-accion="eliminar">Eliminar</button>
+        </div>
+    </li>
+</template>
 
-async function guardarEdicion(id) {
-    const btnGuardar = document.getElementById(`btn-guardar-${id}`);
+<!-- Plantilla del formulario de edición -->
+<template id="plantilla-edicion">
+    <form class="formulario edicion" novalidate>
+        <div class="campos-linea">
+            <div class="campo">
+                <label class="etiqueta" data-para="monto">Monto (€)</label>
+                <input name="monto" type="number" inputmode="decimal" step="0.01" min="0.01" required>
+            </div>
+            <div class="campo">
+                <label class="etiqueta" data-para="fecha">Fecha</label>
+                <input name="fecha" type="date" required>
+            </div>
+        </div>
+        <div class="campo">
+            <label class="etiqueta" data-para="descripcion">Descripción</label>
+            <input name="descripcion" type="text" maxlength="200" autocomplete="off">
+        </div>
+        <p class="error-campo" role="alert"></p>
+        <div class="movimiento-acciones">
+            <button type="submit" class="boton pequeno primario">Guardar</button>
+            <button type="button" class="boton pequeno secundario" data-accion="cancelar">Cancelar</button>
+        </div>
+    </form>
+</template>
 
-    let monto = document.getElementById(`edit-monto-${id}`).value;
-    const fecha = document.getElementById(`edit-fecha-${id}`).value;
-    const descripcion = document.getElementById(`edit-desc-${id}`).value;
-
-    // 🔹 Normalizar formato europeo (coma → punto)
-    monto = monto.replace(",", ".");
-    monto = parseFloat(monto);
-
-    // 🔹 Validación robusta
-    if (isNaN(monto) || monto <= 0 || !fecha) {
-        mostrarMensaje("Monto y fecha son obligatorios", "error");
-        return;
-    }
-
-    // 🔹 LOADING
-    const textoOriginal = btnGuardar.innerText;
-    btnGuardar.disabled = true;
-    btnGuardar.innerText = "Guardando...";
-
-    try {
-        await apiRequest(`/transferencias/${id}`, {
-            method: "PUT",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({
-                monto: monto,
-                fecha,
-                descripcion
-            })
-        });
-
-        mostrarMensaje("Transferencia actualizada");
-
-        cargarTransferencias();
-        cargarResumen();
-
-    } catch (error) {
-        // ya manejado en apiRequest
-    } finally {
-        btnGuardar.disabled = false;
-        btnGuardar.innerText = textoOriginal;
-    }
-}
-
-    async function agregarTransferencia() {
-        const btn = document.getElementById("btn-agregar");
-
-        const monto = document.getElementById("monto").value;
-        const fecha = document.getElementById("fecha").value;
-        const descripcion = document.getElementById("descripcion").value;
-
-        if (!monto || !fecha) {
-            mostrarMensaje("Monto y fecha son obligatorios", "error");
-            return;
-        }
-
-        // 🔹 ACTIVAR LOADING
-        btn.disabled = true;
-        const textoOriginal = btn.innerText;
-        btn.innerText = "Guardando...";
-
-        try {
-            await apiRequest("/transferencias", {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({
-                    monto: parseFloat(monto),
-                    fecha,
-                    descripcion,
-                    persona: getPersonaSeleccionada()
-                })
-            });
-
-            mostrarMensaje("Transferencia agregada correctamente");
-
-            // limpiar inputs
-            document.getElementById("monto").value = "";
-            ponerFechaHoy();
-            document.getElementById("descripcion").value = "";
-            document.getElementById("monto").focus();
-
-            // mostrar el mes de la transferencia recién creada
-            mesSeleccionado = fecha.slice(0, 7);
-            document.getElementById("filtro-mes").value = mesSeleccionado;
-
-            // recargar datos
-            cargarResumen();
-            cargarTransferencias();
-
-        } catch (error) {
-            // ya manejado
-        } finally {
-            // 🔹 DESACTIVAR LOADING (SIEMPRE)
-            btn.disabled = false;
-            btn.innerText = textoOriginal;
-        }
-    }
-
-    async function eliminarTransferencia(id) {
-        const btn = document.getElementById(`btn-eliminar-${id}`);
-
-        if (!confirm("¿Eliminar esta transferencia?")) return;
-
-        // 🔹 loading
-        btn.disabled = true;
-        btn.innerText = "...";
-
-        try {
-            await apiRequest(`/transferencias/${id}`, {
-                method: "DELETE"
-            });
-
-            mostrarMensaje("Transferencia eliminada");
-
-            const elemento = document.getElementById(`transferencia-${id}`);
-            if (elemento) elemento.remove();
-
-            cargarResumen();
-
-        } catch (error) {
-            btn.disabled = false;
-            btn.innerText = "X";
-        }
-    }
-
-async function toggleConfirmar(id) {
-    const btn = document.getElementById(`btn-confirmar-${id}`);
-    const textoOriginal = btn.innerText;
-
-    // 🔹 loading
-    btn.disabled = true;
-    btn.innerText = "Procesando...";
-
-    try {
-        await apiRequest(`/transferencias/${id}/confirmar`, {
-            method: "PATCH"
-        });
-
-        await cargarResumen();
-        await cargarTransferencias();
-
-    } catch (error) {
-        // ya manejado en apiRequest
-    } finally {
-        btn.disabled = false;
-        btn.innerText = textoOriginal;
-    }
-}
-
-
-    async function guardarObjetivo() {
-    const btn = document.getElementById("btn-objetivo");
-
-    const objetivo = document.getElementById("nuevo-objetivo").value;
-    const valor = parseFloat(objetivo);
-
-    if (isNaN(valor) || valor <= 0) {
-        mostrarMensaje("Objetivo inválido", "error");
-        return;
-    }
-
-    const textoOriginal = btn.innerText;
-    btn.disabled = true;
-    btn.innerText = "Guardando...";
-
-    try {
-        await apiRequest("/objetivo", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({
-                objetivo: valor,
-                persona: getPersonaSeleccionada()
-            })
-        });
-
-        mostrarMensaje("Objetivo actualizado");
-
-        document.getElementById("nuevo-objetivo").value = "";
-        cargarResumen();
-
-    } finally {
-        btn.disabled = false;
-        btn.innerText = textoOriginal;
-    }
-}
-
-async function iniciarApp() {
-    try {
-        await apiRequest("/check-auth");
-
-        // Si está autenticado → mostrar app
-        document.getElementById("login-container").style.display = "none";
-        document.getElementById("app").style.display = "block";
-
-        document.getElementById("filtro-mes").value = mesSeleccionado;
-        cargarResumen();
-        cargarTransferencias();
-        ponerFechaHoy();
-
-    } catch (error) {
-        // No autenticado → mostrar login
-        document.getElementById("login-container").style.display = "block";
-        document.getElementById("app").style.display = "none";
-    }
-}
-
-    // Ejecutar al cargar
-    iniciarApp();
-
-    </script>
-
-    </body>
-    </html>
+</body>
+</html>

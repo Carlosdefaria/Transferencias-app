@@ -77,6 +77,7 @@ def test_validar_moneda():
 def test_resumen_a_medias():
     r = calcular_resumen(Decimal("500.00"), Decimal("200.00"), Decimal("1070.00"))
     assert r["restante"] == Decimal("570.00")
+    assert r["restante_tras_pendiente"] == Decimal("370.00")
     assert r["porcentaje"] == Decimal("46.7")
     assert r["porcentaje_pendiente"] == Decimal("18.7")
 

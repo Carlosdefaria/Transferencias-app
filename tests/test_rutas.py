@@ -165,6 +165,7 @@ def test_resumen_totales(sesion):
     assert r["pendiente"] == "200.00"
     assert r["objetivo"] == "1070.00"
     assert r["restante"] == "570.00"
+    assert r["restante_tras_pendiente"] == "370.00"
     assert r["porcentaje"] == 46.7
     assert r["moneda"] == "EUR"
     assert r["aviso"] is None
