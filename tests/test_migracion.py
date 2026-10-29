@@ -11,7 +11,7 @@ import psycopg
 import pytest
 
 from conftest import crear
-from migraciones import m001_numeric
+from migraciones import m001_numeric, m002_mes_cuenta
 
 pytestmark = pytest.mark.skipif(not os.environ.get("TEST_DATABASE_URL"),
                                 reason="Necesita TEST_DATABASE_URL (PostgreSQL)")
@@ -75,9 +75,12 @@ def test_si_falla_no_cambia_nada(conn_antigua):
 
 
 def test_la_app_funciona_antes_y_despues_de_migrar(conn_antigua, sesion):
-    # 'sesion' ha creado tablas nuevas; se vuelve al esquema antiguo.
+    # 'sesion' ha creado tablas nuevas; se vuelve al esquema antiguo. El código
+    # actual necesita la columna de la migración 002, que se aplica antes de
+    # desplegarlo.
     for sql in ESQUEMA_ANTIGUO:
         conn_antigua.execute(sql)
+    m002_mes_cuenta.aplicar(conn_antigua)
     conn_antigua.commit()
 
     def resumen():
@@ -92,3 +95,16 @@ def test_la_app_funciona_antes_y_despues_de_migrar(conn_antigua, sesion):
     assert resumen()["pendiente"] == "10.05"
     crear(sesion, monto="1.01", fecha="2026-10-05")
     assert resumen()["pendiente"] == "11.06"
+
+
+def test_m002_aplicar_y_revertir(conn_antigua):
+    assert m002_mes_cuenta.comprobar(conn_antigua) is False
+    m002_mes_cuenta.aplicar(conn_antigua)
+    conn_antigua.commit()
+    assert m002_mes_cuenta.columna_existe(conn_antigua)
+    # Las transferencias que ya había siguen contando por su fecha
+    assert m002_mes_cuenta.con_mes_distinto(conn_antigua) == 0
+
+    m002_mes_cuenta.revertir(conn_antigua)
+    conn_antigua.commit()
+    assert not m002_mes_cuenta.columna_existe(conn_antigua)
