@@ -190,8 +190,9 @@ h2 { font-size: 1.05rem; font-weight: 650; }
     font-size: 1rem;
 }
 
-/* En móviles estrechos solo queda el logo, para que quepan los botones */
-@media (max-width: 400px) {
+/* En móviles solo queda el logo, para que quepan los botones
+   (en un iPhone de 430 px el título ya no cabía entero) */
+@media (max-width: 480px) {
     .cabecera-texto { display: none; }
 }
 
@@ -274,6 +275,19 @@ input, select {
 input:focus-visible, select:focus-visible { border-color: var(--foco); }
 
 input[aria-invalid="true"] { border-color: var(--peligro); }
+
+/* Safari en iPhone da a los campos de fecha un ancho mínimo propio e
+   ignora width: 100%, así que se salían de la tarjeta. Sin su apariencia
+   nativa respetan el ancho; el calendario se sigue abriendo al tocarlos. */
+input[type="date"],
+input[type="month"] {
+    -webkit-appearance: none;
+    appearance: none;
+    display: block;
+    min-width: 0;
+}
+/* Safari centra la fecha: se alinea a la izquierda como el resto de campos */
+input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 
 .error-campo {
     color: var(--peligro);
