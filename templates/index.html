@@ -51,7 +51,10 @@
 <div id="vista-app" hidden>
     <header class="cabecera">
         <div class="cabecera-interior">
-            <p class="cabecera-titulo">Transferencias</p>
+            <p class="cabecera-titulo">
+                <span class="logo-mini" aria-hidden="true">€</span>
+                <span class="cabecera-texto">Transferencias</span>
+            </p>
             <div class="cabecera-acciones">
                 <button id="btn-personas" type="button" class="boton fantasma pequeno"
                         aria-haspopup="dialog" aria-controls="dialogo-personas">Personas</button>
@@ -102,15 +105,20 @@
                 <legend class="sr-only">Persona</legend>
             </fieldset>
 
-            <div class="fila-controles">
-                <div class="selector-mes">
-                    <button id="mes-anterior" type="button" class="boton icono" aria-label="Mes anterior">‹</button>
+            <div class="selector-mes">
+                <button id="mes-anterior" type="button" class="boton icono" aria-label="Mes anterior">‹</button>
+                <!-- Se muestra el mes en español; el selector nativo queda encima,
+                     invisible, para que al tocar se abra el calendario del móvil -->
+                <div class="caja-mes">
+                    <span id="texto-mes" aria-hidden="true"></span>
                     <label for="filtro-mes" class="sr-only">Mes</label>
                     <input type="month" id="filtro-mes" required>
-                    <button id="mes-siguiente" type="button" class="boton icono" aria-label="Mes siguiente">›</button>
                 </div>
-                <button id="btn-mes-actual" type="button" class="boton secundario pequeno">Mes actual</button>
+                <button id="mes-siguiente" type="button" class="boton icono" aria-label="Mes siguiente">›</button>
+            </div>
 
+            <div class="fila-controles">
+                <button id="btn-mes-actual" type="button" class="boton secundario">Mes actual</button>
                 <label for="moneda" class="sr-only">Moneda de visualización</label>
                 <select id="moneda" class="selector-moneda">
                     <option value="EUR">EUR €</option>

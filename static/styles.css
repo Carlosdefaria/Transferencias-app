@@ -159,6 +159,7 @@ h2 { font-size: 1.05rem; font-weight: 650; }
 }
 
 .cabecera-interior {
+    gap: .5rem;
     max-width: 1080px;
     margin: 0 auto;
     padding: .5rem 1rem;
@@ -167,9 +168,36 @@ h2 { font-size: 1.05rem; font-weight: 650; }
     justify-content: space-between;
 }
 
-.cabecera-titulo { font-weight: 700; font-size: 1.05rem; }
+.cabecera-titulo {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    min-width: 0;
+    font-weight: 700;
+    font-size: 1.05rem;
+    white-space: nowrap;
+}
+.cabecera-texto { overflow: hidden; text-overflow: ellipsis; }
+
+.logo-mini {
+    flex: none;
+    width: 30px; height: 30px;
+    display: grid;
+    place-items: center;
+    border-radius: 9px;
+    background: var(--primario);
+    color: var(--texto-sobre-primario);
+    font-size: 1rem;
+}
+
+/* En móviles estrechos solo queda el logo, para que quepan los botones */
+@media (max-width: 400px) {
+    .cabecera-texto { display: none; }
+}
 
 .cabecera-acciones { display: flex; gap: .25rem; }
+/* Los botones de la cabecera nunca se parten en dos líneas */
+.cabecera-acciones .boton { white-space: nowrap; padding-inline: .6rem; }
 
 /* ---------- Botones ---------- */
 .boton {
@@ -296,7 +324,15 @@ input[aria-invalid="true"] { border-color: var(--peligro); }
 @keyframes girar { to { transform: rotate(360deg); } }
 
 /* ---------- Controles (persona, mes, moneda) ---------- */
-.controles { display: grid; gap: .75rem; margin-bottom: 1rem; }
+.controles {
+    display: grid;
+    gap: .5rem;
+    margin-bottom: 1rem;
+    grid-template-areas: "personas" "mes" "acciones";
+}
+#selector-personas { grid-area: personas; }
+.selector-mes { grid-area: mes; }
+.fila-controles { grid-area: acciones; }
 
 .segmentado {
     display: grid;
@@ -334,26 +370,48 @@ input[aria-invalid="true"] { border-color: var(--peligro); }
     outline-offset: 1px;
 }
 
+/* "Mes actual" y moneda a partes iguales, ocupando todo el ancho */
 .fila-controles {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: .5rem;
-    align-items: center;
 }
+.fila-controles .boton:disabled { opacity: .5; cursor: default; }
 
 .selector-mes {
-    display: flex;
-    gap: .25rem;
-    flex: 1 1 220px;
+    display: grid;
+    grid-template-columns: var(--tactil) 1fr var(--tactil);
+    gap: .5rem;
 }
-.selector-mes input { flex: 1; min-width: 0; text-align: center; }
 
-.selector-moneda { width: auto; flex: 0 0 auto; }
+.caja-mes {
+    position: relative;
+    min-height: var(--tactil);
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--borde);
+    border-radius: var(--radio-pequeno);
+    background: var(--superficie);
+    font-weight: 650;
+}
+.caja-mes:focus-within { outline: 3px solid var(--foco); outline-offset: 2px; }
+/* El selector nativo cubre toda la caja pero es invisible */
+.caja-mes input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
 
 @media (min-width: 900px) {
-    .controles { grid-template-columns: 320px 1fr; align-items: center; }
-    .fila-controles { justify-content: flex-end; }
-    .selector-mes { flex: 0 1 300px; }
+    .controles {
+        grid-template-columns: minmax(0, 1fr) 320px 260px;
+        grid-template-areas: "personas mes acciones";
+        align-items: center;
+        column-gap: 1rem;
+    }
 }
 
 /* ---------- Resumen ---------- */
@@ -420,9 +478,9 @@ input[aria-invalid="true"] { border-color: var(--peligro); }
 .cifra dd {
     margin: .15rem 0 0;
     font-weight: 700;
-    font-size: clamp(.9rem, 3.8vw, 1.05rem);
+    font-size: clamp(.85rem, 3.9vw, 1.05rem);
     font-variant-numeric: tabular-nums;
-    overflow-wrap: anywhere;
+    white-space: nowrap; /* "1070,00 €" siempre en una línea */
 }
 .cifra-confirmado { background: var(--confirmado-fondo); }
 .cifra-confirmado dd { color: var(--confirmado); }
@@ -430,6 +488,20 @@ input[aria-invalid="true"] { border-color: var(--peligro); }
 .cifra-pendiente dd { color: var(--pendiente); }
 
 .punto { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+
+/* Móviles estrechos: confirmado y pendiente arriba, objetivo en una fila
+   completa debajo (tres columnas no caben sin cortar los textos) */
+@media (max-width: 400px) {
+    .tarjeta { padding: .95rem; }
+    .cifras { grid-template-columns: 1fr 1fr; }
+    .cifra-objetivo {
+        grid-column: 1 / -1;
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+    }
+    .cifra-objetivo dd { margin: 0; }
+}
 .cifra-confirmado .punto { background: var(--confirmado); }
 .cifra-pendiente .punto { background: var(--pendiente-barra); }
 
