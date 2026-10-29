@@ -14,6 +14,7 @@ App web Flask para controlar las transferencias mensuales que me envía mi padre
 - `rutas.py`: Blueprint con las rutas; solo leen la petición, llaman a `logica`/`db` y responden.
 - `logica.py`: validaciones, cálculos (`calcular_resumen`) y divisas. Sin Flask ni BD. Errores de negocio (`DatosInvalidos` 400, `NoEncontrada` 404, `Conflicto` 409, `TasasNoDisponibles` 503).
 - `db.py`: conexión (`conexion()` hace commit/rollback y siempre cierra), creación de tablas y todas las consultas SQL.
+- `migraciones/`: scripts de cambio de esquema para PostgreSQL, que se ejecutan a mano (`comprobar`/`aplicar`/`revertir`). Nunca se ejecutan al desplegar.
 - `tests/`: pytest (`python -m pytest`). Usan SQLite temporal y nunca `DATABASE_URL`; con `TEST_DATABASE_URL` (nombre de BD con "test") se prueban contra PostgreSQL.
 - `templates/index.html`: interfaz y JS (llamadas `fetch` a la API).
 - `static/styles.css`: estilos.
@@ -34,7 +35,7 @@ Las consultas se escriben con `%s` y se ejecutan con `db.ejecutar(conn, query, p
 - Código legible; lógica de negocio separada de la presentación; sin duplicación.
 - Validar datos en el backend, gestionar errores, consultas parametrizadas.
 - Nunca exponer claves ni credenciales.
-- Importes con Decimal, nunca float. El código Python ya usa Decimal; las columnas siguen siendo `REAL`/`FLOAT` (migrar a NUMERIC está pendiente).
+- Importes con Decimal, nunca float. El código usa Decimal y las tablas nuevas se crean con `NUMERIC(12,2)` y `config.persona` única. Las tablas ya existentes en producción se migran a mano con `migraciones/m001_numeric.py` (ver `migraciones/README.md`); el código funciona con ambos esquemas.
 - Preservar funcionalidades existentes y compatibilidad con Render.
 
 ## Cómo trabajar conmigo
