@@ -19,6 +19,7 @@ App web Flask para controlar las transferencias mensuales que me envía mi padre
 - `tests/`: pytest (`python -m pytest`). Usan SQLite temporal y nunca `DATABASE_URL`; con `TEST_DATABASE_URL` (nombre de BD con "test") se prueban contra PostgreSQL.
 - `templates/index.html`: estructura de la interfaz (sin JS en línea ni `onclick`; usa `<template>` para las filas del historial y el formulario de edición).
 - `static/app.js`: comportamiento de la interfaz (`api()` centraliza las llamadas `fetch` y vuelve al login si la sesión caduca). Los textos se insertan con `textContent`, nunca con `innerHTML`.
+- `static/manifest.json` e `static/iconos/`: hacen la app instalable en el móvil (icono y pantalla completa). Sin service worker: no funciona sin conexión.
 - `static/styles.css`: estilos mobile first, variables de color en `:root` y modo oscuro con `prefers-color-scheme`.
 - `backup.py`: copia de seguridad local con `pg_dump` (rutas de Windows por defecto, configurables con `BACKUP_DIR`/`PG_DUMP_PATH`), conserva `BACKUP_DIAS` días y no borra nada si el backup falla.
 - `Procfile` (`web: gunicorn app:app`), `runtime.txt` (python-3.11.9), `requirements.txt` (producción, UTF-8), `requirements-dev.txt` (añade pytest), `.env.example`.

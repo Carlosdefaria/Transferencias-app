@@ -233,3 +233,13 @@ def test_errores_http_son_json(sesion):
     respuesta = sesion.get("/no-existe")
     assert respuesta.status_code == 404
     assert "error" in respuesta.get_json()
+
+
+def test_app_instalable(cliente):
+    html = cliente.get("/").get_data(as_text=True)
+    assert 'rel="manifest"' in html and 'rel="apple-touch-icon"' in html
+
+    manifiesto = cliente.get("/static/manifest.json").get_json()
+    assert manifiesto["display"] == "standalone"
+    for icono in manifiesto["icons"]:
+        assert cliente.get(icono["src"]).status_code == 200
