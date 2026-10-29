@@ -259,6 +259,21 @@ async function cargarResumen(version) {
     }
 }
 
+// Tramos de la barra de progreso, del más alto al más bajo.
+const TRAMOS = [
+    { desde: 66, clase: "tramo-casi", texto: "Ya casi está" },
+    { desde: 33, clase: "tramo-mitad", texto: "A mitad de camino" },
+    { desde: 0, clase: "tramo-lejos", texto: "Lejos del objetivo" },
+];
+const TRAMO_CUMPLIDO = { clase: "tramo-cumplido", texto: "¡Objetivo cumplido!" };
+
+function tramoProgreso(porcentaje, cumplido) {
+    // "cumplido" viene de restante <= 0: así el verde coincide exactamente
+    // con el mensaje "Objetivo cumplido", aunque el % esté redondeado.
+    if (cumplido) return TRAMO_CUMPLIDO;
+    return TRAMOS.find((tramo) => porcentaje >= tramo.desde);
+}
+
 function pintarResumen(datos) {
     const moneda = datos.moneda;
     const restante = Number(datos.restante);
@@ -296,8 +311,16 @@ function pintarResumen(datos) {
     $("barra-pendiente").style.width = `${pendientePct}%`;
     $("barra").setAttribute("aria-valuenow", String(Math.round(confirmadoPct)));
 
-    $("texto-progreso").textContent =
-        `${formatearPorcentaje(datos.porcentaje)} del objetivo confirmado`;
+    const tramo = tramoProgreso(datos.porcentaje, cumplido);
+    const tarjeta = $("resumen");
+    for (const { clase } of [...TRAMOS, TRAMO_CUMPLIDO]) tarjeta.classList.remove(clase);
+    tarjeta.classList.add(tramo.clase);
+    $("estado-progreso").textContent = tramo.texto;
+
+    $("texto-progreso").textContent = `${formatearPorcentaje(datos.porcentaje)} confirmado`;
+    // Lo que lee un lector de pantalla al llegar a la barra
+    $("barra").setAttribute("aria-valuetext",
+        `${formatearPorcentaje(datos.porcentaje)} confirmado. ${tramo.texto}`);
 
     $("confirmado").textContent = formatearDinero(datos.total_confirmado, moneda);
     $("pendiente").textContent = formatearDinero(datos.pendiente, moneda);
