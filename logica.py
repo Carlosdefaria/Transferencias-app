@@ -97,6 +97,21 @@ def validar_mes(valor=None):
         raise DatosInvalidos("Mes inválido (formato AAAA-MM)")
 
 
+def validar_mes_cuenta(valor, fecha):
+    """Mes para el que cuenta una transferencia, o None si es el de su fecha.
+
+    Solo se guarda cuando es distinto (una transferencia adelantada o
+    atrasada); lo normal es que quede vacío y cuente por su fecha.
+    """
+    if not valor:
+        return None
+    try:
+        mes = datetime.strptime(str(valor), "%Y-%m").strftime("%Y-%m")
+    except ValueError:
+        raise DatosInvalidos("Mes de cuenta inválido (formato AAAA-MM)")
+    return None if mes == fecha[:7] else mes
+
+
 def rango_mes(mes):
     """Devuelve (primer día del mes, primer día del mes siguiente) como texto.
 

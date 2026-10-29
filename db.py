@@ -13,7 +13,7 @@ from decimal import Decimal
 
 import psycopg
 
-from logica import a_decimal
+from logica import a_decimal, rango_mes
 
 log = logging.getLogger(__name__)
 
@@ -90,7 +90,8 @@ def crear_tablas():
                 fecha {tipo_fecha} NOT NULL,
                 descripcion TEXT,
                 persona TEXT NOT NULL,
-                confirmada BOOLEAN DEFAULT {falso}
+                confirmada BOOLEAN DEFAULT {falso},
+                mes_cuenta TEXT
             )
         """)
         ejecutar(conn, f"""
@@ -121,14 +122,32 @@ def _fecha_a_texto(valor):
     return str(valor)[:10]
 
 
+_COLUMNAS_TRANSFERENCIA = "id, monto, fecha, descripcion, persona, confirmada, mes_cuenta"
+
+# Una transferencia cuenta para el mes de "mes_cuenta" si lo tiene; si está
+# vacío (lo normal), para el mes de su fecha. Funciona igual en los dos motores.
+_FILTRO_MES = """
+    persona = %s
+    AND (mes_cuenta = %s OR (mes_cuenta IS NULL AND fecha >= %s AND fecha < %s))
+"""
+
+
+def _parametros_mes(persona, mes):
+    desde, hasta = rango_mes(mes)
+    return (persona, mes, desde, hasta)
+
+
 def _fila_a_transferencia(fila):
+    fecha = _fecha_a_texto(fila[2])
     return {
         "id": fila[0],
         "monto": a_decimal(fila[1]),
-        "fecha": _fecha_a_texto(fila[2]),
+        "fecha": fecha,
         "descripcion": fila[3] or "",
         "persona": fila[4],
         "confirmada": bool(fila[5]),
+        # Siempre se devuelve el mes para el que cuenta, aunque sea el de la fecha
+        "mes_cuenta": fila[6] or fecha[:7],
     }
 
 
@@ -214,24 +233,25 @@ def eliminar_persona(conn, id):
     ejecutar(conn, "DELETE FROM config WHERE id = %s", (id,))
 
 
-def listar_transferencias(conn, persona, desde, hasta):
-    filas = ejecutar(conn, """
-        SELECT id, monto, fecha, descripcion, persona, confirmada
+def listar_transferencias(conn, persona, mes):
+    """Transferencias que cuentan para el mes 'YYYY-MM' (por fecha o por mes_cuenta)."""
+    filas = ejecutar(conn, f"""
+        SELECT {_COLUMNAS_TRANSFERENCIA}
         FROM transferencias
-        WHERE persona = %s AND fecha >= %s AND fecha < %s
+        WHERE {_FILTRO_MES}
         ORDER BY fecha DESC, id DESC
-    """, (persona, desde, hasta)).fetchall()
+    """, _parametros_mes(persona, mes)).fetchall()
     return [_fila_a_transferencia(fila) for fila in filas]
 
 
-def sumar_por_estado(conn, persona, desde, hasta):
-    """Devuelve (total confirmado, total pendiente) del periodo en Decimal."""
-    filas = ejecutar(conn, """
+def sumar_por_estado(conn, persona, mes):
+    """Devuelve (total confirmado, total pendiente) del mes en Decimal."""
+    filas = ejecutar(conn, f"""
         SELECT confirmada, COALESCE(SUM(monto), 0)
         FROM transferencias
-        WHERE persona = %s AND fecha >= %s AND fecha < %s
+        WHERE {_FILTRO_MES}
         GROUP BY confirmada
-    """, (persona, desde, hasta)).fetchall()
+    """, _parametros_mes(persona, mes)).fetchall()
 
     totales = {True: Decimal("0.00"), False: Decimal("0.00")}
     for confirmada, total in filas:
@@ -240,25 +260,27 @@ def sumar_por_estado(conn, persona, desde, hasta):
 
 
 def obtener_transferencia(conn, id):
-    fila = ejecutar(conn, """
-        SELECT id, monto, fecha, descripcion, persona, confirmada
+    fila = ejecutar(conn, f"""
+        SELECT {_COLUMNAS_TRANSFERENCIA}
         FROM transferencias WHERE id = %s
     """, (id,)).fetchone()
     return _fila_a_transferencia(fila) if fila else None
 
 
-def insertar_transferencia(conn, monto, fecha, descripcion, persona):
+def insertar_transferencia(conn, monto, fecha, descripcion, persona, mes_cuenta=None):
     return ejecutar(conn, """
-        INSERT INTO transferencias (monto, fecha, descripcion, persona, confirmada)
-        VALUES (%s, %s, %s, %s, %s)
+        INSERT INTO transferencias (monto, fecha, descripcion, persona, confirmada, mes_cuenta)
+        VALUES (%s, %s, %s, %s, %s, %s)
         RETURNING id
-    """, (monto, fecha, descripcion, persona, False)).fetchone()[0]
+    """, (monto, fecha, descripcion, persona, False, mes_cuenta)).fetchone()[0]
 
 
-def actualizar_transferencia(conn, id, monto, fecha, descripcion):
-    ejecutar(conn,
-             "UPDATE transferencias SET monto = %s, fecha = %s, descripcion = %s WHERE id = %s",
-             (monto, fecha, descripcion, id))
+def actualizar_transferencia(conn, id, monto, fecha, descripcion, mes_cuenta=None):
+    ejecutar(conn, """
+        UPDATE transferencias
+        SET monto = %s, fecha = %s, descripcion = %s, mes_cuenta = %s
+        WHERE id = %s
+    """, (monto, fecha, descripcion, mes_cuenta, id))
 
 
 def alternar_confirmacion(conn, id):

@@ -9,10 +9,10 @@ from flask import (Blueprint, current_app, jsonify, render_template, request,
 import db
 from seguridad import limitador_login
 from logica import (Conflicto, DatosInvalidos, NoEncontrada, TasasNoDisponibles,
-                    calcular_resumen, convertir, obtener_tasas, rango_mes,
+                    calcular_resumen, convertir, obtener_tasas,
                     tasa_cambio, validar_descripcion, validar_fecha,
-                    validar_mes, validar_moneda, validar_monto,
-                    validar_nombre)
+                    validar_mes, validar_mes_cuenta, validar_moneda,
+                    validar_monto, validar_nombre)
 
 bp = Blueprint("rutas", __name__)
 
@@ -128,11 +128,10 @@ def obtener_transferencias():
     persona = request.args.get("persona")
     moneda = validar_moneda(request.args.get("moneda"))
     mes = validar_mes(request.args.get("mes"))
-    desde, hasta = rango_mes(mes)
 
     with db.conexion() as conn:
         objetivo_de(conn, persona)
-        transferencias = db.listar_transferencias(conn, persona, desde, hasta)
+        transferencias = db.listar_transferencias(conn, persona, mes)
 
     moneda, tasas, aviso = preparar_conversion(moneda)
 
@@ -155,11 +154,12 @@ def crear_transferencia():
     monto = validar_monto(data.get("monto"))
     fecha = validar_fecha(data.get("fecha"))
     descripcion = validar_descripcion(data.get("descripcion"))
+    mes_cuenta = validar_mes_cuenta(data.get("mes_cuenta"), fecha)
     persona = data.get("persona")
 
     with db.conexion() as conn:
         objetivo_de(conn, persona)
-        nuevo_id = db.insertar_transferencia(conn, monto, fecha, descripcion, persona)
+        nuevo_id = db.insertar_transferencia(conn, monto, fecha, descripcion, persona, mes_cuenta)
 
     return jsonify({"mensaje": "Transferencia creada", "id": nuevo_id}), 201
 
@@ -171,6 +171,7 @@ def editar_transferencia(id):
     monto = validar_monto(data.get("monto"))
     fecha = validar_fecha(data.get("fecha"))
     descripcion = validar_descripcion(data.get("descripcion"))
+    mes_cuenta = validar_mes_cuenta(data.get("mes_cuenta"), fecha)
 
     with db.conexion() as conn:
         transferencia = db.obtener_transferencia(conn, id)
@@ -178,7 +179,7 @@ def editar_transferencia(id):
             raise NoEncontrada("No existe")
         if transferencia["confirmada"]:
             raise Conflicto("No se puede editar una transferencia confirmada")
-        db.actualizar_transferencia(conn, id, monto, fecha, descripcion)
+        db.actualizar_transferencia(conn, id, monto, fecha, descripcion, mes_cuenta)
 
     return jsonify({"ok": True})
 
@@ -218,11 +219,10 @@ def obtener_resumen():
     persona = request.args.get("persona")
     moneda = validar_moneda(request.args.get("moneda"))
     mes = validar_mes(request.args.get("mes"))
-    desde, hasta = rango_mes(mes)
 
     with db.conexion() as conn:
         objetivo = objetivo_de(conn, persona)
-        confirmado, pendiente = db.sumar_por_estado(conn, persona, desde, hasta)
+        confirmado, pendiente = db.sumar_por_estado(conn, persona, mes)
 
     resumen = calcular_resumen(confirmado, pendiente, objetivo)
     moneda, tasas, aviso = preparar_conversion(moneda)

@@ -179,6 +179,7 @@ function mostrarLogin(mensaje = "") {
 async function mostrarApp() {
     mostrarVista("vista-app");
     $("fecha").value = hoyISO();
+    pintarOpcionesMes($("mes-cuenta"), $("fecha").value);
     // Sin la lista de personas no se sabe qué datos pedir, así que va primero.
     try {
         await cargarPersonas();
@@ -330,6 +331,43 @@ function pintarResumen(datos) {
 
 
 // -----------------------------------------------------
+// MES PARA EL QUE CUENTA UNA TRANSFERENCIA
+// -----------------------------------------------------
+// Normalmente una transferencia cuenta para el mes de su fecha, pero puede
+// ser un adelanto (recibida en octubre para noviembre) o un atraso.
+
+// Diferencia en meses entre dos "AAAA-MM" (ej.: de 2026-10 a 2026-11 → 1).
+function mesesEntre(desde, hasta) {
+    const [a1, m1] = desde.split("-").map(Number);
+    const [a2, m2] = hasta.split("-").map(Number);
+    return (a2 - a1) * 12 + (m2 - m1);
+}
+
+// Rellena el <select> con el mes anterior, el de la fecha y el siguiente.
+// "desplazamiento" indica cuál queda elegido (-1, 0 o 1).
+function pintarOpcionesMes(select, fecha, desplazamiento = 0) {
+    if (!fecha) return;
+    const base = fecha.slice(0, 7);
+    const desplazamientos = [...new Set([-1, 0, 1, desplazamiento])].sort((a, b) => a - b);
+
+    select.replaceChildren(...desplazamientos.map((d) => {
+        const mes = sumarMeses(base, d);
+        const nota = d === 0 ? " (mes de la fecha)" : d > 0 ? " (adelantada)" : " (atrasada)";
+        const opcion = new Option(nombreMes(mes) + nota, mes);
+        opcion.dataset.desplazamiento = d;
+        return opcion;
+    }));
+    select.value = sumarMeses(base, desplazamiento);
+}
+
+// Si cambia la fecha, se mantiene la elección relativa ("el mes siguiente").
+function alCambiarFecha(inputFecha, select) {
+    const elegida = select.selectedOptions[0];
+    pintarOpcionesMes(select, inputFecha.value, Number(elegida?.dataset.desplazamiento || 0));
+}
+
+
+// -----------------------------------------------------
 // HISTORIAL
 // -----------------------------------------------------
 
@@ -407,7 +445,18 @@ function crearElemento(t, moneda) {
     elemento.dataset.montoEur = t.monto_eur;
     elemento.dataset.fecha = t.fecha;
     elemento.dataset.descripcion = t.descripcion;
+    elemento.dataset.mesCuenta = t.mes_cuenta;
     elemento.classList.toggle("confirmada", t.confirmada);
+
+    // Etiqueta si cuenta para un mes distinto al de su fecha
+    const desplazamiento = mesesEntre(t.fecha.slice(0, 7), t.mes_cuenta);
+    if (desplazamiento !== 0) {
+        const etiquetaMes = elemento.querySelector(".etiqueta-mes");
+        etiquetaMes.hidden = false;
+        etiquetaMes.textContent = desplazamiento > 0 ? "Adelantada" : "Atrasada";
+        etiquetaMes.title = `Recibida en ${nombreMes(t.fecha.slice(0, 7)).toLowerCase()}, ` +
+            `cuenta para ${nombreMes(t.mes_cuenta).toLowerCase()}`;
+    }
 
     elemento.querySelector(".movimiento-monto").textContent = formatearDinero(t.monto, moneda);
     const etiqueta = elemento.querySelector(".estado");
@@ -486,6 +535,11 @@ function abrirEdicion(elemento) {
     formulario.elements.fecha.value = elemento.dataset.fecha;
     formulario.elements.descripcion.value = elemento.dataset.descripcion;
 
+    const { fecha, mes_cuenta: mesCuenta } = formulario.elements;
+    pintarOpcionesMes(mesCuenta, elemento.dataset.fecha,
+        mesesEntre(elemento.dataset.fecha.slice(0, 7), elemento.dataset.mesCuenta));
+    fecha.addEventListener("change", () => alCambiarFecha(fecha, mesCuenta));
+
     formulario.addEventListener("submit", (evento) => guardarEdicion(evento, id));
     elemento.classList.add("editando");
     elemento.replaceChildren(formulario);
@@ -495,7 +549,7 @@ function abrirEdicion(elemento) {
 async function guardarEdicion(evento, id) {
     evento.preventDefault();
     const formulario = evento.target;
-    const { monto, fecha, descripcion } = formulario.elements;
+    const { monto, fecha, descripcion, mes_cuenta: mesCuenta } = formulario.elements;
     const error = formulario.querySelector(".error-campo");
 
     if (!monto.value || Number(monto.value) <= 0 || !fecha.value) {
@@ -507,10 +561,15 @@ async function guardarEdicion(evento, id) {
     try {
         await api(`/transferencias/${id}`, {
             metodo: "PUT",
-            datos: { monto: monto.value, fecha: fecha.value, descripcion: descripcion.value },
+            datos: {
+                monto: monto.value,
+                fecha: fecha.value,
+                descripcion: descripcion.value,
+                mes_cuenta: mesCuenta.value,
+            },
         });
         avisar("Transferencia actualizada");
-        cambiarMes(fecha.value.slice(0, 7));
+        cambiarMes(mesCuenta.value);
     } catch (e) {
         error.textContent = e.message;
         restaurar();
@@ -536,6 +595,7 @@ async function agregarTransferencia(evento) {
         return mostrarErrorCampo(fecha, "error-fecha", "Elige una fecha");
     }
 
+    const mesCuenta = $("mes-cuenta").value;
     const restaurar = ocupar($("btn-agregar"), "Guardando…");
     try {
         await api("/transferencias", {
@@ -545,13 +605,18 @@ async function agregarTransferencia(evento) {
                 fecha: fecha.value,
                 descripcion: $("descripcion").value,
                 persona: estado.persona,
+                mes_cuenta: mesCuenta,
             },
         });
-        avisar("Transferencia añadida");
+        avisar(mesCuenta === fecha.value.slice(0, 7)
+            ? "Transferencia añadida"
+            : `Transferencia añadida a ${nombreMes(mesCuenta).toLowerCase()}`);
         monto.value = "";
         $("descripcion").value = "";
-        // Se muestra el mes de la transferencia recién creada.
-        cambiarMes(fecha.value.slice(0, 7));
+        // La próxima vuelve a contar por defecto para el mes de su fecha.
+        pintarOpcionesMes($("mes-cuenta"), fecha.value);
+        // Se muestra el mes para el que cuenta la transferencia recién creada.
+        cambiarMes(mesCuenta);
         monto.focus();
     } catch (error) {
         avisar(error.message, "error");
@@ -831,6 +896,7 @@ document.addEventListener("DOMContentLoaded", () => {
     $("btn-mes-actual").addEventListener("click", () => cambiarMes(mesActual()));
 
     $("form-nueva").addEventListener("submit", agregarTransferencia);
+    $("fecha").addEventListener("change", () => alCambiarFecha($("fecha"), $("mes-cuenta")));
     $("form-objetivo").addEventListener("submit", guardarObjetivo);
     $("form-conversor").addEventListener("submit", convertirCantidad);
     $("btn-invertir").addEventListener("click", invertirMonedas);
