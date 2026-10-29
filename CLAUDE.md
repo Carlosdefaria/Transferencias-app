@@ -4,7 +4,7 @@ App web Flask para controlar las transferencias mensuales que me envía mi padre
 
 ## Funcionalidades actuales
 - CRUD de transferencias (monto, fecha, descripción); confirmar/desconfirmar. Las confirmadas no se pueden eliminar.
-- Filtro por mes (por defecto, el actual): la lista y el resumen usan siempre el mismo mes. Totales del mes: confirmado, pendiente, objetivo, restante y barra de progreso.
+- Filtro por mes (por defecto, el actual): la lista y el resumen usan siempre el mismo mes. Totales del mes: confirmado, pendiente, objetivo, restante y barra de progreso. La barra cambia de color por tramos fijos del % confirmado (rojo <33 %, naranja 33–66 %, azul 66–99 %, verde cumplido) con una etiqueta de texto; los tramos están en `TRAMOS` de `static/app.js` y los colores en las variables `--tramo-*` de `styles.css`.
 - Objetivo mensual editable por persona (`POST /objetivo`, tabla `config`).
 - Login con un único PIN compartido (`APP_PIN`, obligatorio en producción) y sesión de Flask (30 días). Máximo 5 PIN incorrectos cada 15 minutos por IP (`seguridad.limitador_login`, en memoria). Las personas no son usuarios con login propio: se eligen en un selector y filtran los datos.
 - Gestión de personas desde la app (botón "Personas" de la cabecera, que abre una ventana modal `<dialog>`): añadir, renombrar (también cambia el nombre en sus transferencias) y eliminar. Solo se elimina a quien no tiene transferencias y nunca a la última. El selector se construye con `GET /personas`; Carlos y Pito son solo los datos iniciales (`db.PERSONAS_INICIALES`) de una BD vacía.

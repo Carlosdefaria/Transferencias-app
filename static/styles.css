@@ -9,6 +9,12 @@
    solo cambia estos valores. Los colores de texto cumplen un contraste
    mínimo de 4.5:1 (WCAG AA) sobre su fondo. */
 :root {
+    /* Colores de la barra de progreso según lo cerca que está el objetivo */
+    --tramo-lejos: #c0262d;
+    --tramo-mitad: #a64b06;
+    --tramo-casi: #2f4bd8;
+    --tramo-cumplido: #17804a;
+
     --fondo: #f4f6fa;
     --superficie: #ffffff;
     --superficie-2: #eef1f6;
@@ -35,6 +41,11 @@
 
 @media (prefers-color-scheme: dark) {
     :root {
+        --tramo-lejos: #ff8a80;
+        --tramo-mitad: #f0a050;
+        --tramo-casi: #8ea2ff;
+        --tramo-cumplido: #4cc38a;
+
         --fondo: #0f1420;
         --superficie: #182032;
         --superficie-2: #212b40;
@@ -453,21 +464,51 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     background: var(--pista-barra);
     overflow: hidden;
 }
+/* El tramo lo pone app.js como clase en la tarjeta (tramo-lejos, tramo-mitad…)
+   y aquí cada clase solo cambia una variable: --color-progreso */
+.resumen { --color-progreso: var(--tramo-lejos); }
+.resumen.tramo-mitad { --color-progreso: var(--tramo-mitad); }
+.resumen.tramo-casi { --color-progreso: var(--tramo-casi); }
+.resumen.tramo-cumplido { --color-progreso: var(--tramo-cumplido); }
+
 .barra-confirmado, .barra-pendiente {
     display: block;
     height: 100%;
     width: 0;
-    transition: width .4s ease;
+    transition: width .4s ease, background-color .4s ease;
 }
-.barra-confirmado { background: var(--confirmado); }
-/* Rayas en lo pendiente: se distingue de lo confirmado sin depender solo del color */
+.barra-confirmado { background: var(--color-progreso); }
+/* Lo pendiente: rayas del mismo color, más claras ("lo que está por llegar") */
 .barra-pendiente {
+    background: var(--pista-barra);
     background: repeating-linear-gradient(
-        -45deg, var(--pendiente-barra) 0 6px,
-        color-mix(in srgb, var(--pendiente-barra) 55%, transparent) 6px 12px);
+        -45deg,
+        color-mix(in srgb, var(--color-progreso) 55%, transparent) 0 6px,
+        color-mix(in srgb, var(--color-progreso) 25%, transparent) 6px 12px);
 }
 
-.texto-progreso { margin-top: .45rem; font-size: .9rem; color: var(--texto-suave); }
+.progreso-pie {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: .5rem;
+    margin-top: .5rem;
+}
+.texto-progreso { font-size: .9rem; color: var(--texto-suave); }
+
+/* Etiqueta del tramo: el texto acompaña al color, para quien no distingue colores */
+.estado-progreso {
+    flex: none;
+    padding: .15rem .6rem;
+    border-radius: 999px;
+    font-size: .8rem;
+    font-weight: 700;
+    color: var(--color-progreso);
+    background: var(--superficie-2);
+    background: color-mix(in srgb, var(--color-progreso) 12%, transparent);
+    transition: color .4s ease, background-color .4s ease;
+}
+.estado-progreso:empty { display: none; }
 
 .cifras {
     display: grid;
