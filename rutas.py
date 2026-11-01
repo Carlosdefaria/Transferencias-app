@@ -10,7 +10,7 @@ import db
 from seguridad import limitador_login
 from logica import (Conflicto, DatosInvalidos, NoEncontrada, TasasNoDisponibles,
                     calcular_resumen, convertir, obtener_tasas,
-                    tasa_cambio, validar_descripcion, validar_fecha,
+                    validar_descripcion, validar_fecha,
                     validar_mes, validar_mes_cuenta, validar_moneda,
                     validar_monto, validar_nombre)
 
@@ -325,25 +325,3 @@ def eliminar_persona(id):
 
     return jsonify({"mensaje": "ok"})
 
-
-# ------------------------
-# CONVERSOR
-# ------------------------
-
-@bp.route("/convertir", methods=["GET"])
-@login_required
-def convertir_cantidad():
-    cantidad = validar_monto(request.args.get("cantidad"), campo="Cantidad")
-    de = validar_moneda(request.args.get("de"))
-    a = validar_moneda(request.args.get("a"))
-
-    tasas = obtener_tasas() if de != a else None
-    tasa = tasa_cambio(de, a, tasas) if tasas else 1
-
-    return jsonify({
-        "cantidad": importe(cantidad),
-        "de": de,
-        "a": a,
-        "resultado": importe(convertir(cantidad, de, a, tasas)),
-        "tasa": f"{tasa:.4f}",
-    })

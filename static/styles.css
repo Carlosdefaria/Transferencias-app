@@ -640,7 +640,6 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .plegable[open] summary::after { transform: rotate(180deg); }
 .plegable[open] > .formulario { margin-top: .75rem; }
 
-.en-linea { display: inline; color: var(--texto); }
 
 /* ---------- Historial ---------- */
 .lista {
@@ -771,15 +770,11 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 
 .subtitulo { font-size: 1rem; font-weight: 650; }
 
-/* ---------- Conversor ---------- */
-.conversor-fila {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    gap: .5rem;
-    align-items: end;
-}
-.resultado-conversion:empty { display: none; }
-.dato-medio { font-size: 1.2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+/* ---------- Desglose de gastos ----------
+   Reutiliza .cifras/.cifra del resumen, siempre en dos columnas */
+.cifras-gastos { grid-template-columns: 1fr 1fr; margin: 0; }
+.cifras-gastos dt { display: block; } /* el icono fluye con el texto si este salta de línea */
+.gastos-total { margin-top: .75rem; }
 
 /* ---------- Avisos flotantes ---------- */
 .avisos {

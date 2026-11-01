@@ -229,41 +229,20 @@
                     <ul id="lista-transferencias" class="lista" aria-busy="true"></ul>
                 </section>
 
-                <!-- CONVERSOR -->
-                <section class="tarjeta" aria-labelledby="titulo-conversor">
-                    <details class="plegable">
-                        <summary><h2 id="titulo-conversor" class="en-linea">Conversor de moneda</h2></summary>
-                        <form id="form-conversor" class="formulario" novalidate>
-                            <div class="campo">
-                                <label for="cantidad" class="etiqueta">Cantidad</label>
-                                <input id="cantidad" type="number" inputmode="decimal" step="0.01" min="0.01" required>
-                            </div>
-                            <div class="conversor-fila">
-                                <div class="campo">
-                                    <label for="de" class="etiqueta">De</label>
-                                    <select id="de">
-                                        <option value="EUR">EUR</option>
-                                        <option value="USD">USD</option>
-                                        <option value="GBP">GBP</option>
-                                    </select>
-                                </div>
-                                <button id="btn-invertir" type="button" class="boton icono" aria-label="Intercambiar monedas">⇄</button>
-                                <div class="campo">
-                                    <label for="a" class="etiqueta">A</label>
-                                    <select id="a">
-                                        <option value="USD">USD</option>
-                                        <option value="EUR">EUR</option>
-                                        <option value="GBP">GBP</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <button type="submit" class="boton secundario ancho">Convertir</button>
-                            <div class="resultado-conversion" aria-live="polite">
-                                <p id="resultado-conversion" class="dato-medio"></p>
-                                <p id="tasa-info" class="texto-suave"></p>
-                            </div>
-                        </form>
-                    </details>
+                <!-- DESGLOSE DE GASTOS: leyenda fija con los gastos que cubre el dinero -->
+                <section class="tarjeta" aria-labelledby="titulo-gastos">
+                    <h2 id="titulo-gastos">Desglose de gastos</h2>
+                    <dl class="cifras cifras-gastos">
+                        <div class="cifra">
+                            <dt><span aria-hidden="true">🎓</span> Universidad</dt>
+                            <dd>2829,00 €</dd>
+                        </div>
+                        <div class="cifra">
+                            <dt><span aria-hidden="true">🏠</span> Alquiler y manutención</dt>
+                            <dd>1200,00 €</dd>
+                        </div>
+                    </dl>
+                    <p class="texto-suave gastos-total">Total: <strong>4029,00 €</strong></p>
                 </section>
             </div>
         </div>
