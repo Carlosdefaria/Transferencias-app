@@ -366,21 +366,20 @@ function mesesEntre(desde, hasta) {
     return (a2 - a1) * 12 + (m2 - m1);
 }
 
-// Rellena el <select> con el mes anterior, el de la fecha y el siguiente.
-// "desplazamiento" indica cuál queda elegido (-1, 0 o 1).
+// Rellena el <select> con el mes de la fecha y el siguiente (un adelanto).
+// No se ofrece el mes anterior: no tiene sentido contar para un mes pasado.
+// "desplazamiento" indica cuál queda elegido (0 o 1).
 function pintarOpcionesMes(select, fecha, desplazamiento = 0) {
     if (!fecha) return;
     const base = fecha.slice(0, 7);
-    const desplazamientos = [...new Set([-1, 0, 1, desplazamiento])].sort((a, b) => a - b);
 
-    select.replaceChildren(...desplazamientos.map((d) => {
+    select.replaceChildren(...[0, 1].map((d) => {
         const mes = sumarMeses(base, d);
-        const nota = d === 0 ? " (mes de la fecha)" : d > 0 ? " (adelantada)" : " (atrasada)";
-        const opcion = new Option(nombreMes(mes) + nota, mes);
+        const opcion = new Option(nombreMes(mes) + (d === 0 ? " (mes de la fecha)" : " (adelantada)"), mes);
         opcion.dataset.desplazamiento = d;
         return opcion;
     }));
-    select.value = sumarMeses(base, desplazamiento);
+    select.value = sumarMeses(base, desplazamiento === 1 ? 1 : 0);
 }
 
 // Si cambia la fecha, se mantiene la elección relativa ("el mes siguiente").

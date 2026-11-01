@@ -1,4 +1,4 @@
-"""Tests de las transferencias que cuentan para otro mes (adelantadas/atrasadas)."""
+"""Tests de las transferencias que cuentan para el mes siguiente (adelantadas)."""
 
 import pytest
 
@@ -27,8 +27,11 @@ def test_validar_mes_cuenta():
     assert validar_mes_cuenta("", "2026-10-28") is None
     assert validar_mes_cuenta("2026-10", "2026-10-28") is None
     assert validar_mes_cuenta("2026-11", "2026-10-28") == "2026-11"
-    with pytest.raises(DatosInvalidos):
-        validar_mes_cuenta("noviembre", "2026-10-28")
+    assert validar_mes_cuenta("2027-01", "2026-12-20") == "2027-01"  # cambio de año
+    # Ni meses pasados ni más allá del siguiente
+    for malo in ("2026-09", "2026-12", "noviembre"):
+        with pytest.raises(DatosInvalidos):
+            validar_mes_cuenta(malo, "2026-10-28")
 
 
 def test_adelantada_cuenta_para_el_mes_siguiente(sesion):
@@ -50,10 +53,12 @@ def test_transferencia_normal_devuelve_el_mes_de_su_fecha(sesion):
     assert lista(sesion, "2026-10")[0]["mes_cuenta"] == "2026-10"
 
 
-def test_atrasada_cuenta_para_el_mes_anterior(sesion):
-    crear_para(sesion, "200", "2026-10-02", "2026-09")
-    assert lista(sesion, "2026-10") == []
-    assert resumen(sesion, "2026-09")["pendiente"] == "200.00"
+def test_no_puede_contar_para_un_mes_pasado(sesion):
+    respuesta = sesion.post("/transferencias", json={
+        "monto": "200", "fecha": "2026-10-02", "persona": "Carlos", "mes_cuenta": "2026-09"})
+    assert respuesta.status_code == 400
+    assert "siguiente" in respuesta.get_json()["error"]
+    assert lista(sesion, "2026-09") == []
 
 
 def test_editar_cambia_el_mes_de_cuenta(sesion):

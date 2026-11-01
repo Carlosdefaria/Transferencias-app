@@ -79,7 +79,7 @@ TEST_DATABASE_URL=postgresql://usuario:clave@localhost/transferencias_test pytho
 **Qué hace:** añade a `transferencias` la columna opcional `mes_cuenta`
 (texto `AAAA-MM`). Si está vacía, la transferencia cuenta para el mes de su
 fecha, como siempre; si tiene un mes, cuenta para ese mes (transferencias
-adelantadas o atrasadas). **No cambia ningún dato existente.**
+adelantadas al mes siguiente). **No cambia ningún dato existente.**
 
 **Hay que aplicarla antes de desplegar el código que la usa**: ese código
 lee la columna y fallaría si no existe.
