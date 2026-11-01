@@ -19,3 +19,6 @@ backups_transferencias/
 Thumbs.db
 # Tests
 .pytest_cache/
+
+# Logs
+*.log
