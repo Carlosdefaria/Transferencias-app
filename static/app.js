@@ -674,36 +674,6 @@ async function guardarObjetivo(evento) {
     }
 }
 
-async function convertirCantidad(evento) {
-    evento.preventDefault();
-    const cantidad = $("cantidad").value;
-    const de = $("de").value;
-    const a = $("a").value;
-    const resultado = $("resultado-conversion");
-
-    if (!cantidad || Number(cantidad) <= 0) {
-        resultado.textContent = "Introduce una cantidad válida";
-        $("tasa-info").textContent = "";
-        return;
-    }
-
-    resultado.textContent = "Calculando…";
-    $("tasa-info").textContent = "";
-    try {
-        const datos = await api(consulta("/convertir", { cantidad, de, a }));
-        resultado.textContent = `${formatearDinero(datos.cantidad, de)} = ${formatearDinero(datos.resultado, a)}`;
-        $("tasa-info").textContent = `1 ${de} = ${datos.tasa} ${a}`;
-    } catch (error) {
-        resultado.textContent = error.message;
-    }
-}
-
-function invertirMonedas() {
-    const de = $("de").value;
-    $("de").value = $("a").value;
-    $("a").value = de;
-}
-
 
 // -----------------------------------------------------
 // PERSONAS
@@ -922,8 +892,6 @@ document.addEventListener("DOMContentLoaded", () => {
     $("fecha").addEventListener("change", () => alCambiarFecha($("fecha"), $("mes-cuenta")));
     prepararCampoFecha($("fecha"));
     $("form-objetivo").addEventListener("submit", guardarObjetivo);
-    $("form-conversor").addEventListener("submit", convertirCantidad);
-    $("btn-invertir").addEventListener("click", invertirMonedas);
     $("lista-transferencias").addEventListener("click", accionLista);
     $("form-persona").addEventListener("submit", agregarPersona);
 

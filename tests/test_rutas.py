@@ -36,7 +36,6 @@ def test_logout(sesion):
     ("patch", "/transferencias/1/confirmar"),
     ("get", "/resumen?persona=Carlos"),
     ("post", "/objetivo"),
-    ("get", "/convertir?cantidad=1&de=EUR&a=USD"),
 ])
 def test_rutas_protegidas(cliente, metodo, url):
     assert getattr(cliente, metodo)(url).status_code == 401
@@ -210,23 +209,6 @@ def test_si_no_hay_tasas_se_muestra_en_eur_y_se_avisa(sesion, monkeypatch):
     assert r["moneda"] == "EUR"
     assert r["objetivo"] == "1070.00"
     assert "no disponible" in r["aviso"]
-
-
-def test_convertir(sesion):
-    r = sesion.get("/convertir?cantidad=100&de=EUR&a=GBP").get_json()
-    assert r["resultado"] == "85.00"
-    assert r["tasa"] == "0.8500"
-    assert sesion.get("/convertir?cantidad=abc&de=EUR&a=GBP").status_code == 400
-
-
-def test_convertir_sin_tasas_da_503(sesion, monkeypatch):
-    def descarga_rota():
-        raise requests.ConnectionError("sin red")
-
-    monkeypatch.setattr(logica, "descargar_tasas", descarga_rota)
-    respuesta = sesion.get("/convertir?cantidad=100&de=EUR&a=GBP")
-    assert respuesta.status_code == 503
-    assert "error" in respuesta.get_json()
 
 
 def test_errores_http_son_json(sesion):
