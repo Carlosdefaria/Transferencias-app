@@ -840,8 +840,10 @@ function recargar() {
 function pintarMes() {
     $("filtro-mes").value = estado.mes;
     $("texto-mes").textContent = nombreMes(estado.mes);
-    // "Mes actual" solo tiene sentido si se está viendo otro mes.
-    $("btn-mes-actual").disabled = estado.mes === mesActual();
+    // El enlace para volver solo tiene sentido si se está viendo otro mes.
+    const boton = $("btn-mes-actual");
+    boton.hidden = estado.mes === mesActual();
+    boton.textContent = `Volver a ${nombreMes(mesActual()).toLowerCase()}`;
 }
 
 function cambiarMes(mes) {
@@ -867,7 +869,12 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     $("mes-anterior").addEventListener("click", () => cambiarMes(sumarMeses(estado.mes, -1)));
     $("mes-siguiente").addEventListener("click", () => cambiarMes(sumarMeses(estado.mes, 1)));
-    $("btn-mes-actual").addEventListener("click", () => cambiarMes(mesActual()));
+    $("btn-mes-actual").addEventListener("click", () => {
+        cambiarMes(mesActual());
+        // El enlace se oculta al pulsarlo: el foco pasa a las flechas
+        // para no perderlo si se usa el teclado.
+        $("mes-anterior").focus();
+    });
 
     $("form-nueva").addEventListener("submit", agregarTransferencia);
     $("fecha").addEventListener("change", () => alCambiarFecha($("fecha"), $("mes-cuenta")));

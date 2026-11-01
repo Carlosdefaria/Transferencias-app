@@ -398,7 +398,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 }
 #selector-personas { grid-area: personas; }
 .selector-mes { grid-area: mes; }
-.fila-controles { grid-area: acciones; }
+#btn-mes-actual { grid-area: acciones; justify-self: center; }
 
 .segmentado {
     display: grid;
@@ -436,13 +436,22 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     outline-offset: 1px;
 }
 
-/* "Mes actual" ocupa todo el ancho */
-.fila-controles {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: .5rem;
+/* Botón con aspecto de enlace: para acciones secundarias como
+   "Volver a noviembre de 2026", que no deben competir con los botones */
+.enlace {
+    min-height: var(--tactil);
+    padding: 0 .25rem;
+    border: 0;
+    background: none;
+    color: var(--primario);
+    font: inherit;
+    font-size: .95rem;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
 }
-.fila-controles .boton:disabled { opacity: .5; cursor: default; }
+.enlace:hover { color: var(--primario-hover); }
 
 .selector-mes {
     display: grid;
@@ -473,11 +482,14 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 
 @media (min-width: 900px) {
     .controles {
-        grid-template-columns: minmax(0, 1fr) 320px 260px;
-        grid-template-areas: "personas mes acciones";
+        /* El enlace va a la izquierda del mes en una columna "auto": cuando
+           está oculto no ocupa nada y el selector de mes no se mueve */
+        grid-template-columns: minmax(0, 1fr) auto 320px;
+        grid-template-areas: "personas acciones mes";
         align-items: center;
         column-gap: 1rem;
     }
+    #btn-mes-actual { justify-self: end; }
 }
 
 /* ---------- Resumen ---------- */
