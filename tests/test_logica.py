@@ -1,14 +1,12 @@
-"""Tests de la lógica pura: validaciones, cálculos y divisas."""
+"""Tests de la lógica pura: validaciones y cálculos."""
 
 from decimal import Decimal
 
 import pytest
-import requests
 
-import logica
-from logica import (DatosInvalidos, TasasNoDisponibles, calcular_resumen,
-                    convertir, rango_mes, validar_descripcion, validar_fecha,
-                    validar_mes, validar_moneda, validar_monto)
+from logica import (DatosInvalidos, calcular_resumen, rango_mes,
+                    validar_descripcion, validar_fecha, validar_mes,
+                    validar_monto)
 
 
 # ------------------------
@@ -63,13 +61,6 @@ def test_validar_descripcion():
         validar_descripcion(123)
 
 
-def test_validar_moneda():
-    assert validar_moneda(None) == "EUR"
-    assert validar_moneda("usd") == "USD"
-    with pytest.raises(DatosInvalidos):
-        validar_moneda("JPY")
-
-
 # ------------------------
 # CÁLCULOS
 # ------------------------
@@ -97,64 +88,3 @@ def test_decimal_no_pierde_centimos():
     # Con float, 0.1 + 0.2 = 0.30000000000000004
     total = validar_monto("0.1") + validar_monto("0.2")
     assert total == Decimal("0.30")
-
-
-# ------------------------
-# DIVISAS
-# ------------------------
-
-TASAS = {"EUR": Decimal("1"), "USD": Decimal("1.10"), "GBP": Decimal("0.85")}
-
-
-def test_convertir():
-    assert convertir(Decimal("100.00"), "EUR", "USD", TASAS) == Decimal("110.00")
-    assert convertir(Decimal("85.00"), "GBP", "EUR", TASAS) == Decimal("100.00")
-    assert convertir(Decimal("85.00"), "GBP", "USD", TASAS) == Decimal("110.00")
-    assert convertir(Decimal("5.00"), "EUR", "EUR", None) == Decimal("5.00")
-
-
-def test_tasas_se_descargan_una_sola_vez(monkeypatch):
-    llamadas = []
-
-    def descarga_falsa():
-        llamadas.append(1)
-        return dict(TASAS)
-
-    monkeypatch.setattr(logica, "descargar_tasas", descarga_falsa)
-    for _ in range(5):
-        logica.obtener_tasas()
-    assert len(llamadas) == 1
-
-
-def test_tasas_caducan(monkeypatch):
-    reloj = [1000.0]
-    llamadas = []
-    monkeypatch.setattr(logica.time, "monotonic", lambda: reloj[0])
-    monkeypatch.setattr(logica, "descargar_tasas", lambda: llamadas.append(1) or dict(TASAS))
-
-    logica.obtener_tasas()
-    reloj[0] += logica.DURACION_CACHE + 1
-    logica.obtener_tasas()
-    assert len(llamadas) == 2
-
-
-def test_si_la_api_falla_se_usa_la_ultima_tasa_conocida(monkeypatch):
-    reloj = [1000.0]
-    monkeypatch.setattr(logica.time, "monotonic", lambda: reloj[0])
-    logica.obtener_tasas()  # rellena la caché con las tasas de prueba
-
-    def descarga_rota():
-        raise requests.ConnectionError("sin red")
-
-    monkeypatch.setattr(logica, "descargar_tasas", descarga_rota)
-    reloj[0] += logica.DURACION_CACHE + 1
-    assert logica.obtener_tasas()["USD"] == Decimal("1.10")
-
-
-def test_si_la_api_falla_sin_cache_se_lanza_error(monkeypatch):
-    def descarga_rota():
-        raise requests.Timeout("lenta")
-
-    monkeypatch.setattr(logica, "descargar_tasas", descarga_rota)
-    with pytest.raises(TasasNoDisponibles):
-        logica.obtener_tasas()

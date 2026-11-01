@@ -1,9 +1,7 @@
 """Tests de las rutas principales con un cliente HTTP de prueba."""
 
 import pytest
-import requests
 
-import logica
 from conftest import PIN, crear
 
 
@@ -52,7 +50,6 @@ def test_crear_y_listar(sesion):
     assert datos["mes"] == "2026-10"
     [t] = datos["transferencias"]
     assert t["monto"] == "150.50"
-    assert t["monto_eur"] == "150.50"
     assert t["fecha"] == "2026-10-05"  # siempre AAAA-MM-DD, también en PostgreSQL
     assert t["descripcion"] == "alquiler"
     assert t["confirmada"] is False
@@ -102,7 +99,6 @@ def test_crear_valida_los_datos(sesion, cuerpo, mensaje):
 
 def test_parametros_invalidos(sesion):
     assert sesion.get("/transferencias?persona=Carlos&mes=octubre").status_code == 400
-    assert sesion.get("/resumen?persona=Carlos&moneda=JPY").status_code == 400
     assert sesion.get("/resumen").status_code == 400
 
 
@@ -151,7 +147,7 @@ def test_eliminar(sesion):
 
 
 # ------------------------
-# RESUMEN, OBJETIVO Y DIVISAS
+# RESUMEN Y OBJETIVO
 # ------------------------
 
 def test_resumen_totales(sesion):
@@ -166,8 +162,6 @@ def test_resumen_totales(sesion):
     assert r["restante"] == "570.00"
     assert r["restante_tras_pendiente"] == "370.00"
     assert r["porcentaje"] == 46.7
-    assert r["moneda"] == "EUR"
-    assert r["aviso"] is None
 
 
 def test_resumen_suma_centimos_sin_errores(sesion):
@@ -186,29 +180,6 @@ def test_objetivo(sesion):
 
     assert sesion.post("/objetivo", json={"persona": "Pito", "objetivo": "0"}).status_code == 400
     assert sesion.post("/objetivo", json={"persona": "Nadie", "objetivo": "5"}).status_code == 400
-
-
-def test_resumen_y_lista_en_otra_moneda(sesion):
-    crear(sesion, monto="100")
-    r = sesion.get("/resumen?persona=Carlos&mes=2026-10&moneda=USD").get_json()
-    assert r["moneda"] == "USD"
-    assert r["objetivo"] == "1177.00"   # 1070 * 1.10
-    assert r["objetivo_eur"] == "1070.00"
-
-    [t] = sesion.get("/transferencias?persona=Carlos&mes=2026-10&moneda=USD").get_json()["transferencias"]
-    assert t["monto"] == "110.00"
-    assert t["monto_eur"] == "100.00"   # el que se usa al editar
-
-
-def test_si_no_hay_tasas_se_muestra_en_eur_y_se_avisa(sesion, monkeypatch):
-    def descarga_rota():
-        raise requests.ConnectionError("sin red")
-
-    monkeypatch.setattr(logica, "descargar_tasas", descarga_rota)
-    r = sesion.get("/resumen?persona=Carlos&mes=2026-10&moneda=USD").get_json()
-    assert r["moneda"] == "EUR"
-    assert r["objetivo"] == "1070.00"
-    assert "no disponible" in r["aviso"]
 
 
 def test_errores_http_son_json(sesion):

@@ -336,7 +336,7 @@ function pintarResumen(datos) {
     $("confirmado").textContent = formatearDinero(datos.total_confirmado);
     $("pendiente").textContent = formatearDinero(datos.pendiente);
     $("objetivo").textContent = formatearDinero(datos.objetivo);
-    $("nuevo-objetivo").placeholder = datos.objetivo_eur;
+    $("nuevo-objetivo").placeholder = datos.objetivo;
 }
 
 
@@ -449,9 +449,9 @@ function pintarTransferencias(datos) {
 function crearElemento(t) {
     const elemento = $("plantilla-transferencia").content.firstElementChild.cloneNode(true);
     elemento.dataset.id = t.id;
-    // Se guardan los datos originales (importe en EUR) para poder editar
-    // sin depender del texto mostrado, que lleva formato español.
-    elemento.dataset.montoEur = t.monto_eur;
+    // Se guardan los datos originales para poder editar sin depender del
+    // texto mostrado, que lleva formato español ("1.070,00 €").
+    elemento.dataset.monto = t.monto;
     elemento.dataset.fecha = t.fecha;
     elemento.dataset.descripcion = t.descripcion;
     elemento.dataset.mesCuenta = t.mes_cuenta;
@@ -540,7 +540,7 @@ function abrirEdicion(elemento) {
         campo.id = `editar-${etiqueta.dataset.para}-${id}`;
         etiqueta.htmlFor = campo.id;
     }
-    formulario.elements.monto.value = elemento.dataset.montoEur;
+    formulario.elements.monto.value = elemento.dataset.monto;
     formulario.elements.fecha.value = elemento.dataset.fecha;
     formulario.elements.descripcion.value = elemento.dataset.descripcion;
 

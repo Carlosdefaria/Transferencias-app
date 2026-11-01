@@ -19,7 +19,6 @@ https://tu-app.onrender.com
 - Cálculo de dinero pendiente por confirmar
 - Barra de progreso visual
 - Filtro por mes
-- Soporte multi-moneda (EUR, USD, GBP)
 
 ---
 
