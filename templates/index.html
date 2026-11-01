@@ -199,6 +199,12 @@
                             </div>
                         </div>
                         <div class="campo">
+                            <label for="mes-cuenta" class="etiqueta">Cuenta para el mes</label>
+                            <!-- Las opciones (mes anterior, el de la fecha y el siguiente) las crea app.js -->
+                            <select id="mes-cuenta" aria-describedby="ayuda-mes-cuenta"></select>
+                            <p id="ayuda-mes-cuenta" class="ayuda">Cámbialo si es un adelanto para el mes siguiente.</p>
+                        </div>
+                        <div class="campo">
                             <label for="descripcion" class="etiqueta">Descripción <span class="texto-suave">(opcional)</span></label>
                             <input id="descripcion" type="text" maxlength="200" autocomplete="off">
                         </div>
@@ -264,7 +270,10 @@
     <li class="movimiento">
         <div class="movimiento-cabecera">
             <span class="movimiento-monto"></span>
-            <span class="estado"></span>
+            <span class="movimiento-etiquetas">
+                <span class="etiqueta-mes" hidden></span>
+                <span class="estado"></span>
+            </span>
         </div>
         <p class="movimiento-detalle">
             <time class="movimiento-fecha"></time>
@@ -319,6 +328,10 @@
                 <label class="etiqueta" data-para="fecha">Fecha</label>
                 <input name="fecha" type="date" required>
             </div>
+        </div>
+        <div class="campo">
+            <label class="etiqueta" data-para="mes_cuenta">Cuenta para el mes</label>
+            <select name="mes_cuenta"></select>
         </div>
         <div class="campo">
             <label class="etiqueta" data-para="descripcion">Descripción</label>

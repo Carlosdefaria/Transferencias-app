@@ -73,3 +73,37 @@ aplica y revierte la migración:
 ```bash
 TEST_DATABASE_URL=postgresql://usuario:clave@localhost/transferencias_test python -m pytest
 ```
+
+## 002 — Mes para el que cuenta una transferencia (`m002_mes_cuenta.py`)
+
+**Qué hace:** añade a `transferencias` la columna opcional `mes_cuenta`
+(texto `AAAA-MM`). Si está vacía, la transferencia cuenta para el mes de su
+fecha, como siempre; si tiene un mes, cuenta para ese mes (transferencias
+adelantadas o atrasadas). **No cambia ningún dato existente.**
+
+**Hay que aplicarla antes de desplegar el código que la usa**: ese código
+lee la columna y fallaría si no existe.
+
+**Opción fácil — editor SQL de Neon:** en la consola de Neon, *SQL Editor*,
+pega y ejecuta:
+
+```sql
+ALTER TABLE transferencias ADD COLUMN mes_cuenta TEXT;
+```
+
+Para deshacerla (las transferencias adelantadas volverían a contar por su fecha):
+
+```sql
+ALTER TABLE transferencias DROP COLUMN mes_cuenta;
+```
+
+**Opción con el script:**
+
+```bash
+python -m migraciones.m002_mes_cuenta comprobar --url "postgresql://..."
+python -m migraciones.m002_mes_cuenta aplicar --url "postgresql://..."
+```
+
+En SQLite (local) no hace falta nada si borras `database.db`; si quieres
+conservarla, ejecuta el mismo `ALTER TABLE ... ADD COLUMN` con cualquier
+cliente de SQLite.

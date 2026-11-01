@@ -300,6 +300,8 @@ input[type="month"] {
 /* Safari centra la fecha: se alinea a la izquierda como el resto de campos */
 input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 
+.ayuda { font-size: .85rem; color: var(--texto-suave); }
+
 .error-campo {
     color: var(--peligro);
     font-size: .875rem;
@@ -647,6 +649,19 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     color: var(--pendiente);
 }
 .confirmada .estado { background: var(--confirmado-fondo); color: var(--confirmado); }
+
+.movimiento-etiquetas { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .3rem; }
+
+/* "Adelantada" / "Atrasada": cuenta para un mes distinto al de su fecha */
+.etiqueta-mes {
+    padding: .15rem .55rem;
+    border-radius: 999px;
+    font-size: .8rem;
+    font-weight: 700;
+    color: var(--primario);
+    background: var(--superficie-2);
+    background: color-mix(in srgb, var(--primario) 12%, transparent);
+}
 
 .movimiento-detalle {
     margin-top: .2rem;

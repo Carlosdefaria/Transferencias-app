@@ -4,6 +4,7 @@ App web Flask para controlar las transferencias mensuales que me envía mi padre
 
 ## Funcionalidades actuales
 - CRUD de transferencias (monto, fecha, descripción); confirmar/desconfirmar. Las confirmadas no se pueden eliminar.
+- Una transferencia cuenta para el mes de su fecha salvo que tenga `mes_cuenta` (columna opcional, `AAAA-MM`): así se registran adelantos (recibida en octubre para noviembre) o atrasos. Solo se guarda si es distinto del mes de la fecha (`logica.validar_mes_cuenta`); la API siempre devuelve el mes efectivo en `mes_cuenta`. En la interfaz se elige entre mes anterior, el de la fecha y el siguiente, y se muestra la etiqueta "Adelantada"/"Atrasada".
 - Filtro por mes (por defecto, el actual): la lista y el resumen usan siempre el mismo mes. Totales del mes: confirmado, pendiente, objetivo, restante y barra de progreso. La barra cambia de color por tramos fijos del % confirmado (rojo <33 %, naranja 33–66 %, azul 66–99 %, verde cumplido) con una etiqueta de texto; los tramos están en `TRAMOS` de `static/app.js` y los colores en las variables `--tramo-*` de `styles.css`.
 - Objetivo mensual editable por persona (`POST /objetivo`, tabla `config`).
 - Login con un único PIN compartido (`APP_PIN`, obligatorio en producción) y sesión de Flask (30 días). Máximo 5 PIN incorrectos cada 15 minutos por IP (`seguridad.limitador_login`, en memoria). Las personas no son usuarios con login propio: se eligen en un selector y filtran los datos.
@@ -32,7 +33,7 @@ Python 3.11 + Flask, HTML/CSS/JS básico (sin React), SQLite (`database.db`) en 
 
 Variables en `.env` (python-dotenv): `SECRET_KEY` (obligatoria), `DATABASE_URL` (si falta, se usa SQLite), `APP_PIN` (obligatoria en producción; en local, `1234` por defecto), `RENDER` (la pone Render: activa cookies `Secure`, HSTS y `ProxyFix`), `PROXY_SALTOS` (proxies delante de la app, 1 por defecto), `DB_PASSWORD`, `BACKUP_DIR`, `PG_DUMP_PATH`, `BACKUP_DIAS` (solo `backup.py`). Plantilla en `.env.example`.
 
-Las consultas se escriben con `%s` y se ejecutan con `db.ejecutar(conn, query, params)`, que las adapta a `?` en SQLite. Cualquier SQL nuevo debe funcionar en ambos motores (los meses se filtran con `fecha >= inicio AND fecha < fin`). `SQLITE_PATH` cambia la ruta de la BD local.
+Las consultas se escriben con `%s` y se ejecutan con `db.ejecutar(conn, query, params)`, que las adapta a `?` en SQLite. Cualquier SQL nuevo debe funcionar en ambos motores (los meses se filtran con `db._FILTRO_MES`: `mes_cuenta` si existe y, si no, `fecha >= inicio AND fecha < fin`). `SQLITE_PATH` cambia la ruta de la BD local.
 
 ## Prioridades técnicas
 - Arquitectura simple, sin dependencias ni abstracciones innecesarias.
