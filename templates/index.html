@@ -194,7 +194,12 @@
                             </div>
                             <div class="campo">
                                 <label for="fecha" class="etiqueta">Fecha</label>
-                                <input id="fecha" type="date" required aria-describedby="error-fecha">
+                                <!-- La fecha se muestra como DD/MM/AAAA; el campo nativo queda encima,
+                                     invisible, para que al tocar se abra el calendario -->
+                                <div class="caja-fecha">
+                                    <span class="texto-fecha" aria-hidden="true"></span>
+                                    <input id="fecha" type="date" required aria-describedby="error-fecha">
+                                </div>
                                 <p id="error-fecha" class="error-campo"></p>
                             </div>
                         </div>
@@ -326,7 +331,10 @@
             </div>
             <div class="campo">
                 <label class="etiqueta" data-para="fecha">Fecha</label>
-                <input name="fecha" type="date" required>
+                <div class="caja-fecha">
+                    <span class="texto-fecha" aria-hidden="true"></span>
+                    <input name="fecha" type="date" required>
+                </div>
             </div>
         </div>
         <div class="campo">

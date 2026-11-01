@@ -56,6 +56,28 @@ function formatearFecha(iso) {
         .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" });
 }
 
+// "2026-10-28" → "28/10/2026"
+function formatearFechaNumerica(iso) {
+    const [anio, mes, dia] = iso.split("-");
+    return `${dia}/${mes}/${anio}`;
+}
+
+// Muestra la fecha del campo nativo en DD/MM/AAAA en su caja (.caja-fecha).
+function pintarFecha(input) {
+    input.closest(".caja-fecha").querySelector(".texto-fecha").textContent =
+        input.value ? formatearFechaNumerica(input.value) : "";
+}
+
+function prepararCampoFecha(input) {
+    input.addEventListener("change", () => pintarFecha(input));
+    input.addEventListener("input", () => pintarFecha(input));
+    // En ordenador, un clic no abre el calendario por sí solo: se pide.
+    input.addEventListener("click", () => {
+        try { input.showPicker(); } catch { /* navegador sin showPicker */ }
+    });
+    pintarFecha(input);
+}
+
 // Los importes llegan del servidor como texto ("1070.00") para no perder
 // precisión; aquí solo se convierten a número para mostrarlos.
 function formatearDinero(valor, moneda = estado.moneda) {
@@ -179,6 +201,7 @@ function mostrarLogin(mensaje = "") {
 async function mostrarApp() {
     mostrarVista("vista-app");
     $("fecha").value = hoyISO();
+    pintarFecha($("fecha"));
     pintarOpcionesMes($("mes-cuenta"), $("fecha").value);
     // Sin la lista de personas no se sabe qué datos pedir, así que va primero.
     try {
@@ -539,6 +562,7 @@ function abrirEdicion(elemento) {
     pintarOpcionesMes(mesCuenta, elemento.dataset.fecha,
         mesesEntre(elemento.dataset.fecha.slice(0, 7), elemento.dataset.mesCuenta));
     fecha.addEventListener("change", () => alCambiarFecha(fecha, mesCuenta));
+    prepararCampoFecha(fecha);
 
     formulario.addEventListener("submit", (evento) => guardarEdicion(evento, id));
     elemento.classList.add("editando");
@@ -897,6 +921,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     $("form-nueva").addEventListener("submit", agregarTransferencia);
     $("fecha").addEventListener("change", () => alCambiarFecha($("fecha"), $("mes-cuenta")));
+    prepararCampoFecha($("fecha"));
     $("form-objetivo").addEventListener("submit", guardarObjetivo);
     $("form-conversor").addEventListener("submit", convertirCantidad);
     $("btn-invertir").addEventListener("click", invertirMonedas);
