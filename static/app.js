@@ -8,12 +8,9 @@
 
 const $ = (id) => document.getElementById(id);
 
-const SIMBOLOS = { EUR: "€", USD: "$", GBP: "£" };
-
 const estado = {
     persona: null,   // se elige al cargar la lista de personas
     personas: [],
-    moneda: "EUR",
     mes: mesActual(),
     // Cada recarga incrementa este número. Si llega una respuesta de una
     // recarga antigua (por ejemplo, tras cambiar rápido de persona), se ignora.
@@ -80,12 +77,12 @@ function prepararCampoFecha(input) {
 
 // Los importes llegan del servidor como texto ("1070.00") para no perder
 // precisión; aquí solo se convierten a número para mostrarlos.
-function formatearDinero(valor, moneda = estado.moneda) {
+function formatearDinero(valor) {
     const numero = new Intl.NumberFormat("es-ES", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     }).format(Number(valor) || 0);
-    return `${numero} ${SIMBOLOS[moneda] || moneda}`;
+    return `${numero} €`;
 }
 
 function formatearPorcentaje(valor) {
@@ -214,11 +211,6 @@ async function mostrarApp() {
 }
 
 async function iniciar() {
-    const moneda = leerPreferencia("moneda");
-    if (moneda && SIMBOLOS[moneda]) {
-        estado.moneda = moneda;
-        $("moneda").value = moneda;
-    }
     pintarMes();
 
     try {
@@ -267,7 +259,7 @@ async function cargarResumen(version) {
 
     try {
         const datos = await api(consulta("/resumen", {
-            persona: estado.persona, moneda: estado.moneda, mes: estado.mes,
+            persona: estado.persona, mes: estado.mes,
         }));
         if (version !== estado.version) return;
         pintarResumen(datos);
@@ -299,32 +291,27 @@ function tramoProgreso(porcentaje, cumplido) {
 }
 
 function pintarResumen(datos) {
-    const moneda = datos.moneda;
     const restante = Number(datos.restante);
     const cumplido = restante <= 0;
 
     $("titulo-resumen").textContent = `${nombreMes(datos.mes)} · ${estado.persona}`;
-
-    const aviso = $("aviso-moneda");
-    aviso.hidden = !datos.aviso;
-    aviso.textContent = datos.aviso || "";
 
     $("resumen").classList.toggle("cumplido", cumplido);
     $("restante-etiqueta").textContent = cumplido ? "Objetivo cumplido · recibido" : "Falta por recibir";
 
     if (cumplido) {
         // Con el objetivo cumplido se muestra lo recibido y cuánto se ha superado.
-        $("restante").textContent = formatearDinero(datos.total_confirmado, moneda);
+        $("restante").textContent = formatearDinero(datos.total_confirmado);
         $("restante-detalle").textContent = restante < 0
-            ? `Superado en ${formatearDinero(-restante, moneda)}`
+            ? `Superado en ${formatearDinero(-restante)}`
             : "Justo el objetivo";
     } else {
-        $("restante").textContent = formatearDinero(restante, moneda);
+        $("restante").textContent = formatearDinero(restante);
         const trasPendiente = Number(datos.restante_tras_pendiente);
         $("restante-detalle").textContent = Number(datos.pendiente) > 0
             ? (trasPendiente <= 0
                 ? "Con lo pendiente se alcanzaría el objetivo"
-                : `Con lo pendiente faltarían ${formatearDinero(trasPendiente, moneda)}`)
+                : `Con lo pendiente faltarían ${formatearDinero(trasPendiente)}`)
             : "";
     }
 
@@ -346,9 +333,9 @@ function pintarResumen(datos) {
     $("barra").setAttribute("aria-valuetext",
         `${formatearPorcentaje(datos.porcentaje)} confirmado. ${tramo.texto}`);
 
-    $("confirmado").textContent = formatearDinero(datos.total_confirmado, moneda);
-    $("pendiente").textContent = formatearDinero(datos.pendiente, moneda);
-    $("objetivo").textContent = formatearDinero(datos.objetivo, moneda);
+    $("confirmado").textContent = formatearDinero(datos.total_confirmado);
+    $("pendiente").textContent = formatearDinero(datos.pendiente);
+    $("objetivo").textContent = formatearDinero(datos.objetivo);
     $("nuevo-objetivo").placeholder = datos.objetivo_eur;
 }
 
@@ -432,7 +419,7 @@ async function cargarTransferencias(version) {
 
     try {
         const datos = await api(consulta("/transferencias", {
-            persona: estado.persona, moneda: estado.moneda, mes: estado.mes,
+            persona: estado.persona, mes: estado.mes,
         }));
         if (version !== estado.version) return;
         pintarTransferencias(datos);
@@ -450,7 +437,7 @@ function pintarTransferencias(datos) {
     const lista = $("lista-transferencias");
     const transferencias = datos.transferencias;
 
-    lista.replaceChildren(...transferencias.map((t) => crearElemento(t, datos.moneda)));
+    lista.replaceChildren(...transferencias.map((t) => crearElemento(t)));
 
     const n = transferencias.length;
     $("contador").textContent = n === 1 ? "1 transferencia" : `${n} transferencias`;
@@ -459,11 +446,11 @@ function pintarTransferencias(datos) {
     }
 }
 
-function crearElemento(t, moneda) {
+function crearElemento(t) {
     const elemento = $("plantilla-transferencia").content.firstElementChild.cloneNode(true);
     elemento.dataset.id = t.id;
     // Se guardan los datos originales (importe en EUR) para poder editar
-    // sin depender del texto mostrado, que puede estar en otra moneda.
+    // sin depender del texto mostrado, que lleva formato español.
     elemento.dataset.montoEur = t.monto_eur;
     elemento.dataset.fecha = t.fecha;
     elemento.dataset.descripcion = t.descripcion;
@@ -480,7 +467,7 @@ function crearElemento(t, moneda) {
             `cuenta para ${nombreMes(t.mes_cuenta).toLowerCase()}`;
     }
 
-    elemento.querySelector(".movimiento-monto").textContent = formatearDinero(t.monto, moneda);
+    elemento.querySelector(".movimiento-monto").textContent = formatearDinero(t.monto);
     const etiqueta = elemento.querySelector(".estado");
     etiqueta.textContent = t.confirmada ? "✓ Confirmada" : "Pendiente";
 
@@ -731,7 +718,7 @@ function pintarListaPersonas() {
         fila.querySelector(".fila-persona-nombre").textContent = p.nombre;
 
         const n = p.transferencias;
-        let detalle = `Objetivo ${formatearDinero(p.objetivo, "EUR")} · ${n === 1 ? "1 transferencia" : `${n} transferencias`}`;
+        let detalle = `Objetivo ${formatearDinero(p.objetivo)} · ${n === 1 ? "1 transferencia" : `${n} transferencias`}`;
 
         // Mismas reglas que el servidor: no se elimina a quien tiene
         // transferencias ni a la última persona.
@@ -872,12 +859,6 @@ function cambiarMes(mes) {
 document.addEventListener("DOMContentLoaded", () => {
     $("form-login").addEventListener("submit", entrar);
     $("btn-logout").addEventListener("click", salir);
-
-    $("moneda").addEventListener("change", (evento) => {
-        estado.moneda = evento.target.value;
-        guardarPreferencia("moneda", estado.moneda);
-        recargar();
-    });
 
     $("filtro-mes").addEventListener("change", (evento) => cambiarMes(evento.target.value));
     // En ordenador, un clic en la caja no abre el calendario por sí solo: se pide.
