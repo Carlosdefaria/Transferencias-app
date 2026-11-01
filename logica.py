@@ -1,4 +1,4 @@
-"""Lógica de negocio: validaciones, cálculos y divisas.
+"""Lógica de negocio: validaciones y cálculos.
 
 Este módulo no sabe nada de Flask ni de la base de datos: recibe valores y
 devuelve valores. Por eso se puede probar con tests sencillos.
@@ -7,16 +7,9 @@ Todos los importes se manejan como Decimal (nunca float) para no perder
 céntimos: en float, 0.1 + 0.2 da 0.30000000000000004.
 """
 
-import logging
-import time
 from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
-import requests
-
-log = logging.getLogger(__name__)
-
-MONEDAS = ("EUR", "USD", "GBP")
 CENTIMOS = Decimal("0.01")
 MONTO_MAXIMO = Decimal("1000000")
 MAX_DESCRIPCION = 200
@@ -43,10 +36,6 @@ class NoEncontrada(ErrorNegocio):
 
 class Conflicto(ErrorNegocio):
     codigo = 409
-
-
-class TasasNoDisponibles(ErrorNegocio):
-    codigo = 503
 
 
 # ------------------------
@@ -157,13 +146,6 @@ def validar_nombre(valor):
     return nombre
 
 
-def validar_moneda(valor):
-    moneda = (valor or "EUR").upper()
-    if moneda not in MONEDAS:
-        raise DatosInvalidos("Moneda no soportada")
-    return moneda
-
-
 # ------------------------
 # CÁLCULOS
 # ------------------------
@@ -194,62 +176,3 @@ def calcular_resumen(confirmado, pendiente, objetivo):
         "porcentaje": porcentaje.quantize(una_cifra, rounding=ROUND_HALF_UP),
         "porcentaje_pendiente": porcentaje_pendiente.quantize(una_cifra, rounding=ROUND_HALF_UP),
     }
-
-
-# ------------------------
-# DIVISAS
-# ------------------------
-# Las tasas se piden una sola vez (con base EUR) y se guardan en memoria
-# durante una hora. Antes se hacía una petición HTTP por cada importe.
-
-URL_TASAS = "https://api.exchangerate-api.com/v4/latest/EUR"
-DURACION_CACHE = 3600  # segundos
-
-_cache_tasas = {"tasas": None, "hora": 0.0}
-
-
-def descargar_tasas():
-    """Pide las tasas a ExchangeRate-API. Devuelve {moneda: Decimal} con base EUR."""
-    respuesta = requests.get(URL_TASAS, timeout=3)
-    respuesta.raise_for_status()
-    rates = respuesta.json()["rates"]
-    return {moneda: Decimal(str(rates[moneda])) for moneda in MONEDAS}
-
-
-def obtener_tasas():
-    """Devuelve las tasas usando la caché. Lanza TasasNoDisponibles si no hay ninguna."""
-    ahora = time.monotonic()
-    tasas = _cache_tasas["tasas"]
-
-    if tasas and ahora - _cache_tasas["hora"] < DURACION_CACHE:
-        return tasas
-
-    try:
-        tasas = descargar_tasas()
-    except (requests.RequestException, ValueError, KeyError, TypeError,
-            InvalidOperation) as error:
-        log.warning("No se pudieron descargar las tasas: %s", error)
-        if _cache_tasas["tasas"]:
-            # Mejor una tasa de hace un rato que ninguna.
-            return _cache_tasas["tasas"]
-        raise TasasNoDisponibles("No se pudo obtener el tipo de cambio")
-
-    _cache_tasas["tasas"] = tasas
-    _cache_tasas["hora"] = ahora
-    return tasas
-
-
-def vaciar_cache_tasas():
-    _cache_tasas["tasas"] = None
-    _cache_tasas["hora"] = 0.0
-
-
-def tasa_cambio(de, a, tasas):
-    """Tasa para pasar de una moneda a otra a partir de tasas con base EUR."""
-    return tasas[a] / tasas[de]
-
-
-def convertir(monto, de, a, tasas):
-    if de == a:
-        return monto
-    return (monto * tasa_cambio(de, a, tasas)).quantize(CENTIMOS, rounding=ROUND_HALF_UP)

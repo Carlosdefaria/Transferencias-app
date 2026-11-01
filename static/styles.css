@@ -389,7 +389,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 }
 @keyframes girar { to { transform: rotate(360deg); } }
 
-/* ---------- Controles (persona, mes, moneda) ---------- */
+/* ---------- Controles (persona y mes) ---------- */
 .controles {
     display: grid;
     gap: .5rem;
@@ -436,10 +436,10 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     outline-offset: 1px;
 }
 
-/* "Mes actual" y moneda a partes iguales, ocupando todo el ancho */
+/* "Mes actual" ocupa todo el ancho */
 .fila-controles {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: .5rem;
 }
 .fila-controles .boton:disabled { opacity: .5; cursor: default; }
@@ -601,15 +601,6 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .cifra-confirmado .punto { background: var(--confirmado); }
 .cifra-pendiente .punto { background: var(--pendiente-barra); }
 
-.aviso {
-    margin-top: .75rem;
-    padding: .6rem .8rem;
-    border-radius: var(--radio-pequeno);
-    background: var(--pendiente-fondo);
-    color: var(--pendiente);
-    font-size: .9rem;
-    font-weight: 600;
-}
 
 /* Estado de carga: los números se atenúan mientras llegan los nuevos */
 .resumen.cargando .dato-grande,

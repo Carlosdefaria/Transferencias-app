@@ -11,7 +11,6 @@ Por seguridad, los tests NUNCA usan la base de datos de producción:
 import os
 import sys
 import tempfile
-from decimal import Decimal
 
 import pytest
 
@@ -30,23 +29,10 @@ os.environ.pop("APP_ENV", None)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import db  # noqa: E402
-import logica  # noqa: E402
 import seguridad  # noqa: E402
 from app import crear_app  # noqa: E402
 
 PIN = "4321"
-TASAS_PRUEBA = {"EUR": Decimal("1"), "USD": Decimal("1.10"), "GBP": Decimal("0.85")}
-
-
-@pytest.fixture(autouse=True)
-def tasas_falsas(monkeypatch):
-    """Ningún test llama a Internet: las tasas son siempre las de prueba."""
-    logica.vaciar_cache_tasas()
-    monkeypatch.setattr(logica, "descargar_tasas", lambda: dict(TASAS_PRUEBA))
-    yield
-    logica.vaciar_cache_tasas()
-
-
 @pytest.fixture(autouse=True)
 def limitador_limpio():
     seguridad.limitador_login._fallos.clear()

@@ -98,7 +98,7 @@
     <main id="principal" class="contenedor">
         <h1 class="sr-only">Control de Transferencias</h1>
 
-        <!-- FILTROS: persona, mes y moneda -->
+        <!-- FILTROS: persona y mes -->
         <section class="controles" aria-label="Filtros">
             <!-- Los botones de cada persona los crea app.js con los datos de /personas -->
             <fieldset id="selector-personas" class="segmentado">
@@ -119,12 +119,6 @@
 
             <div class="fila-controles">
                 <button id="btn-mes-actual" type="button" class="boton secundario">Mes actual</button>
-                <label for="moneda" class="sr-only">Moneda de visualización</label>
-                <select id="moneda" class="selector-moneda">
-                    <option value="EUR">EUR €</option>
-                    <option value="USD">USD $</option>
-                    <option value="GBP">GBP £</option>
-                </select>
             </div>
         </section>
 
@@ -133,8 +127,6 @@
                 <!-- RESUMEN DEL MES -->
                 <section id="resumen" class="tarjeta resumen" aria-labelledby="titulo-resumen" aria-busy="true">
                     <h2 id="titulo-resumen" class="resumen-titulo">Resumen</h2>
-
-                    <p id="aviso-moneda" class="aviso" hidden></p>
 
                     <div class="resumen-principal">
                         <p id="restante-etiqueta" class="etiqueta-dato">Falta por recibir</p>

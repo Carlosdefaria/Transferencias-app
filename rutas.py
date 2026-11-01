@@ -8,11 +8,9 @@ from flask import (Blueprint, current_app, jsonify, render_template, request,
 
 import db
 from seguridad import limitador_login
-from logica import (Conflicto, DatosInvalidos, NoEncontrada, TasasNoDisponibles,
-                    calcular_resumen, convertir, obtener_tasas,
-                    validar_descripcion, validar_fecha,
-                    validar_mes, validar_mes_cuenta, validar_moneda,
-                    validar_monto, validar_nombre)
+from logica import (Conflicto, DatosInvalidos, NoEncontrada, calcular_resumen,
+                    validar_descripcion, validar_fecha, validar_mes,
+                    validar_mes_cuenta, validar_monto, validar_nombre)
 
 bp = Blueprint("rutas", __name__)
 
@@ -46,20 +44,6 @@ def objetivo_de(conn, persona):
     if objetivo is None:
         raise DatosInvalidos("Persona desconocida")
     return objetivo
-
-
-def preparar_conversion(moneda):
-    """Devuelve (moneda que se usará, tasas, aviso).
-
-    Si la API de tasas no responde, se muestra en EUR y se avisa, en lugar
-    de enseñar euros con el símbolo de otra moneda como pasaba antes.
-    """
-    if moneda == "EUR":
-        return "EUR", None, None
-    try:
-        return moneda, obtener_tasas(), None
-    except TasasNoDisponibles:
-        return "EUR", None, "Tipo de cambio no disponible: importes en EUR"
 
 
 def importe(valor):
@@ -126,25 +110,16 @@ def logout():
 @login_required
 def obtener_transferencias():
     persona = request.args.get("persona")
-    moneda = validar_moneda(request.args.get("moneda"))
     mes = validar_mes(request.args.get("mes"))
 
     with db.conexion() as conn:
         objetivo_de(conn, persona)
         transferencias = db.listar_transferencias(conn, persona, mes)
 
-    moneda, tasas, aviso = preparar_conversion(moneda)
-
     for t in transferencias:
-        t["monto_eur"] = importe(t["monto"])
-        t["monto"] = importe(convertir(t["monto"], "EUR", moneda, tasas))
+        t["monto"] = importe(t["monto"])
 
-    return jsonify({
-        "mes": mes,
-        "moneda": moneda,
-        "aviso": aviso,
-        "transferencias": transferencias,
-    })
+    return jsonify({"mes": mes, "transferencias": transferencias})
 
 
 @bp.route("/transferencias", methods=["POST"])
@@ -217,7 +192,6 @@ def eliminar_transferencia(id):
 @login_required
 def obtener_resumen():
     persona = request.args.get("persona")
-    moneda = validar_moneda(request.args.get("moneda"))
     mes = validar_mes(request.args.get("mes"))
 
     with db.conexion() as conn:
@@ -225,20 +199,16 @@ def obtener_resumen():
         confirmado, pendiente = db.sumar_por_estado(conn, persona, mes)
 
     resumen = calcular_resumen(confirmado, pendiente, objetivo)
-    moneda, tasas, aviso = preparar_conversion(moneda)
 
     respuesta = {
-        clave: importe(convertir(resumen[clave], "EUR", moneda, tasas))
+        clave: importe(resumen[clave])
         for clave in ("total_confirmado", "pendiente", "objetivo", "restante",
                       "restante_tras_pendiente")
     }
     respuesta.update({
         "porcentaje": float(resumen["porcentaje"]),
         "porcentaje_pendiente": float(resumen["porcentaje_pendiente"]),
-        "objetivo_eur": importe(objetivo),
         "mes": mes,
-        "moneda": moneda,
-        "aviso": aviso,
     })
     return jsonify(respuesta)
 
