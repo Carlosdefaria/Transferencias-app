@@ -375,7 +375,7 @@ function pintarOpcionesMes(select, fecha, desplazamiento = 0) {
 
     select.replaceChildren(...[0, 1].map((d) => {
         const mes = sumarMeses(base, d);
-        const opcion = new Option(nombreMes(mes) + (d === 0 ? " (mes de la fecha)" : " (adelantada)"), mes);
+        const opcion = new Option(nombreMes(mes) + (d === 0 ? " (mes actual)" : " (adelantada)"), mes);
         opcion.dataset.desplazamiento = d;
         return opcion;
     }));
