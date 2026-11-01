@@ -300,6 +300,45 @@ input[type="month"] {
 /* Safari centra la fecha: se alinea a la izquierda como el resto de campos */
 input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 
+/* Campo de fecha en formato DD/MM/AAAA. El navegador muestra la fecha
+   nativa según el idioma del dispositivo (en inglés, MM/DD/AAAA), así que
+   el texto lo pone app.js y el campo nativo queda encima, invisible. */
+.caja-fecha {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: var(--tactil);
+    padding: .55rem .75rem;
+    border: 1px solid var(--borde);
+    border-radius: var(--radio-pequeno);
+    background: var(--superficie);
+    font-size: 1rem;
+    font-variant-numeric: tabular-nums;
+}
+/* Icono de calendario dibujado con una máscara, para que tome el color del texto */
+.caja-fecha::after {
+    content: "";
+    width: 18px;
+    height: 18px;
+    flex: none;
+    background: var(--texto-suave);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Crect x='3' y='5' width='18' height='16' rx='2'/%3E%3Cpath d='M3 10h18M8 3v4M16 3v4'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Crect x='3' y='5' width='18' height='16' rx='2'/%3E%3Cpath d='M3 10h18M8 3v4M16 3v4'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.caja-fecha:focus-within { outline: 3px solid var(--foco); outline-offset: 2px; }
+.caja-fecha:has(input[aria-invalid="true"]) { border-color: var(--peligro); }
+.texto-fecha:empty::before { content: "dd/mm/aaaa"; color: var(--texto-suave); }
+.caja-fecha input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
 .ayuda { font-size: .85rem; color: var(--texto-suave); }
 
 .error-campo {
