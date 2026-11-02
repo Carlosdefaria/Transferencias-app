@@ -20,8 +20,6 @@
 </head>
 <body>
 
-<a class="saltar" href="#principal">Saltar al contenido</a>
-
 <!-- Avisos temporales (éxito / error). aria-live hace que un lector de pantalla los lea. -->
 <div id="avisos" class="avisos" role="status" aria-live="polite"></div>
 
@@ -49,6 +47,9 @@
 
 <!-- APP -->
 <div id="vista-app" hidden>
+    <!-- Dentro de la app: en el login el destino (#principal) está oculto -->
+    <a class="saltar" href="#principal">Saltar al contenido</a>
+
     <header class="cabecera">
         <div class="cabecera-interior">
             <p class="cabecera-titulo">
@@ -213,7 +214,8 @@
                 <!-- HISTORIAL -->
                 <section class="tarjeta" aria-labelledby="titulo-historial">
                     <div class="tarjeta-cabecera">
-                        <h2 id="titulo-historial">Historial del mes</h2>
+                        <!-- tabindex="-1": puede recibir el foco desde app.js (devolverFoco) sin entrar en el orden del tabulador -->
+                        <h2 id="titulo-historial" tabindex="-1">Historial del mes</h2>
                         <span id="contador" class="contador"></span>
                     </div>
                     <div id="estado-lista" class="estado-lista" aria-live="polite"></div>

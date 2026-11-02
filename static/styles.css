@@ -13,7 +13,7 @@
     --tramo-lejos: #c0262d;
     --tramo-mitad: #a64b06;
     --tramo-casi: #2f4bd8;
-    --tramo-cumplido: #17804a;
+    --tramo-cumplido: #13703f;
 
     --fondo: #f4f6fa;
     --superficie: #ffffff;
@@ -21,10 +21,13 @@
     --texto: #172033;
     --texto-suave: #4a5568;
     --borde: #d5dbe5;
+    /* Borde de los campos: al menos 3:1 sobre la superficie (WCAG 1.4.11);
+       --borde, más suave, queda para tarjetas y separadores */
+    --borde-campo: #7f8a9e;
     --primario: #2f4bd8;
     --primario-hover: #2539b0;
     --texto-sobre-primario: #ffffff;
-    --confirmado: #17804a;
+    --confirmado: #13703f; /* 5,4:1 sobre --confirmado-fondo (con #17804a era 4,35:1) */
     --confirmado-fondo: #e2f4ea;
     --pendiente: #9a5800;
     --pendiente-barra: #d98a12;
@@ -52,6 +55,7 @@
         --texto: #e8ecf4;
         --texto-suave: #a9b3c6;
         --borde: #2e3a55;
+        --borde-campo: #66748f;
         --primario: #8ea2ff;
         --primario-hover: #a9b8ff;
         --texto-sobre-primario: #0f1420;
@@ -71,7 +75,12 @@
 /* ---------- Base ---------- */
 *, *::before, *::after { box-sizing: border-box; }
 
-html { -webkit-text-size-adjust: 100%; }
+html {
+    -webkit-text-size-adjust: 100%;
+    /* Al saltar a un elemento (tabulador, enlace "Saltar al contenido"), deja
+       sitio para la cabecera fija y que no quede tapado debajo de ella */
+    scroll-padding-top: 5rem;
+}
 
 body {
     margin: 0;
@@ -83,7 +92,9 @@ body {
 }
 
 h1, h2, h3, p { margin: 0; }
-h2 { font-size: 1.05rem; font-weight: 650; }
+/* Escala de títulos: h1 (login) 1.35rem > h2 (tarjetas) 1.15rem > h3 1rem > texto 1rem.
+   Con 1.05rem los títulos de las tarjetas casi no se distinguían del texto. */
+h2 { font-size: 1.15rem; font-weight: 650; line-height: 1.3; }
 
 [hidden] { display: none !important; }
 
@@ -130,6 +141,14 @@ h2 { font-size: 1.05rem; font-weight: 650; }
     display: grid;
     gap: 1rem;
     align-content: start;
+}
+
+/* Tablet: aún no caben dos columnas (las cifras y la fecha se cortan), así
+   que la columna única se limita y se centra para que los campos no midan
+   700 px. La cabecera se alinea con ella. */
+@media (min-width: 600px) and (max-width: 899px) {
+    .contenedor,
+    .cabecera .cabecera-interior { max-width: 680px; } /* .cabecera delante: su regla base va más abajo */
 }
 
 @media (min-width: 900px) {
@@ -229,7 +248,9 @@ h2 { font-size: 1.05rem; font-weight: 650; }
     transition: background-color .15s, border-color .15s, opacity .15s;
 }
 .boton:hover { background: var(--superficie-2); }
-.boton:disabled { opacity: .6; cursor: progress; }
+.boton:disabled { opacity: .6; cursor: not-allowed; }
+/* Solo mientras espera al servidor (ocupar() en app.js) */
+.boton[aria-busy="true"] { cursor: progress; }
 
 .boton.primario {
     background: var(--primario);
@@ -276,7 +297,7 @@ input, select {
     width: 100%;
     min-height: var(--tactil);
     padding: .55rem .75rem;
-    border: 1px solid var(--borde);
+    border: 1px solid var(--borde-campo);
     border-radius: var(--radio-pequeno);
     background: var(--superficie);
     color: var(--texto);
@@ -310,7 +331,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     justify-content: space-between;
     min-height: var(--tactil);
     padding: .55rem .75rem;
-    border: 1px solid var(--borde);
+    border: 1px solid var(--borde-campo);
     border-radius: var(--radio-pequeno);
     background: var(--superficie);
     font-size: 1rem;
@@ -366,7 +387,9 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 }
 .login-tarjeta h1 { font-size: 1.35rem; }
 .login-tarjeta .etiqueta { text-align: left; }
-.login-tarjeta input { text-align: center; font-size: 1.4rem; letter-spacing: .4em; }
+/* letter-spacing añade espacio también tras el último dígito, lo que
+   desplaza el PIN a la izquierda; text-indent lo compensa */
+.login-tarjeta input { text-align: center; font-size: 1.4rem; letter-spacing: .4em; text-indent: .4em; }
 
 .logo {
     width: 56px; height: 56px;
@@ -426,10 +449,13 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     color: var(--texto-suave);
     cursor: pointer;
 }
+/* La persona elegida se marca con un borde del color principal y un fondo
+   teñido: no depende de la sombra, que en modo oscuro no existe */
 .segmentado input:checked + label {
     background: var(--superficie);
+    background: color-mix(in srgb, var(--primario) 14%, var(--superficie));
     color: var(--texto);
-    box-shadow: var(--sombra);
+    box-shadow: inset 0 0 0 2px var(--primario);
 }
 .segmentado input:focus-visible + label {
     outline: 3px solid var(--foco);
@@ -464,7 +490,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     min-height: var(--tactil);
     display: grid;
     place-items: center;
-    border: 1px solid var(--borde);
+    border: 1px solid var(--borde-campo);
     border-radius: var(--radio-pequeno);
     background: var(--superficie);
     font-weight: 650;
@@ -610,8 +636,16 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     }
     .cifra-objetivo dd { margin: 0; }
 }
-.cifra-confirmado .punto { background: var(--confirmado); }
-.cifra-pendiente .punto { background: var(--pendiente-barra); }
+/* Los puntos son la leyenda de la barra: usan su mismo color de tramo
+   (--color-progreso), relleno para lo confirmado y rayado para lo pendiente */
+.cifra-confirmado .punto { background: var(--color-progreso); }
+.cifra-pendiente .punto {
+    border: 1.5px solid var(--color-progreso);
+    background: repeating-linear-gradient(
+        -45deg,
+        color-mix(in srgb, var(--color-progreso) 70%, transparent) 0 2px,
+        color-mix(in srgb, var(--color-progreso) 25%, transparent) 2px 4px);
+}
 
 
 /* Estado de carga: los números se atenúan mientras llegan los nuevos */
