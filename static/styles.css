@@ -21,6 +21,9 @@
     --texto: #172033;
     --texto-suave: #4a5568;
     --borde: #d5dbe5;
+    /* Borde de los campos: al menos 3:1 sobre la superficie (WCAG 1.4.11);
+       --borde, más suave, queda para tarjetas y separadores */
+    --borde-campo: #7f8a9e;
     --primario: #2f4bd8;
     --primario-hover: #2539b0;
     --texto-sobre-primario: #ffffff;
@@ -52,6 +55,7 @@
         --texto: #e8ecf4;
         --texto-suave: #a9b3c6;
         --borde: #2e3a55;
+        --borde-campo: #66748f;
         --primario: #8ea2ff;
         --primario-hover: #a9b8ff;
         --texto-sobre-primario: #0f1420;
@@ -276,7 +280,7 @@ input, select {
     width: 100%;
     min-height: var(--tactil);
     padding: .55rem .75rem;
-    border: 1px solid var(--borde);
+    border: 1px solid var(--borde-campo);
     border-radius: var(--radio-pequeno);
     background: var(--superficie);
     color: var(--texto);
@@ -310,7 +314,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     justify-content: space-between;
     min-height: var(--tactil);
     padding: .55rem .75rem;
-    border: 1px solid var(--borde);
+    border: 1px solid var(--borde-campo);
     border-radius: var(--radio-pequeno);
     background: var(--superficie);
     font-size: 1rem;
@@ -467,7 +471,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     min-height: var(--tactil);
     display: grid;
     place-items: center;
-    border: 1px solid var(--borde);
+    border: 1px solid var(--borde-campo);
     border-radius: var(--radio-pequeno);
     background: var(--superficie);
     font-weight: 650;
