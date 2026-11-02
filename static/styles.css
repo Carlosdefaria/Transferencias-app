@@ -426,10 +426,13 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     color: var(--texto-suave);
     cursor: pointer;
 }
+/* La persona elegida se marca con un borde del color principal y un fondo
+   teñido: no depende de la sombra, que en modo oscuro no existe */
 .segmentado input:checked + label {
     background: var(--superficie);
+    background: color-mix(in srgb, var(--primario) 14%, var(--superficie));
     color: var(--texto);
-    box-shadow: var(--sombra);
+    box-shadow: inset 0 0 0 2px var(--primario);
 }
 .segmentado input:focus-visible + label {
     outline: 3px solid var(--foco);
