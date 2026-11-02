@@ -19,6 +19,7 @@ const estado = {
     // Cada recarga incrementa este número. Si llega una respuesta de una
     // recarga antigua (por ejemplo, tras cambiar rápido de persona), se ignora.
     version: 0,
+    anunciar: false, // al cambiar de mes o persona, se lee el nuevo resumen
 };
 
 
@@ -69,7 +70,16 @@ function pintarFecha(input) {
         input.value ? formatearFechaNumerica(input.value) : "";
 }
 
+// El campo nativo es invisible. Al usar el teclado se muestra (.con-teclado)
+// para ver qué parte de la fecha se está escribiendo; al salir se vuelve a ocultar.
+function prepararTeclado(input) {
+    const caja = input.parentElement;
+    input.addEventListener("keyup", () => caja.classList.add("con-teclado"));
+    input.addEventListener("blur", () => caja.classList.remove("con-teclado"));
+}
+
 function prepararCampoFecha(input) {
+    prepararTeclado(input);
     input.addEventListener("change", () => pintarFecha(input));
     input.addEventListener("input", () => pintarFecha(input));
     // En ordenador, un clic no abre el calendario por sí solo: se pide.
@@ -208,6 +218,8 @@ function mostrarVista(id) {
 }
 
 function mostrarLogin(mensaje = "") {
+    // Una ventana modal abierta dejaría el login sin poder usarse.
+    document.querySelector("dialog[open]")?.close();
     mostrarVista("vista-login");
     $("error-login").textContent = mensaje;
     $("pin").value = "";
@@ -251,6 +263,7 @@ async function entrar(evento) {
         await api("/login", { metodo: "POST", datos: { pin } });
         $("error-login").textContent = "";
         mostrarApp();
+        $("principal").focus();   // el botón de entrar ya no se ve: el foco no se pierde
     } catch (error) {
         $("error-login").textContent = error.codigo === 401 ? "PIN incorrecto" : error.message;
         $("pin").select();
@@ -318,6 +331,7 @@ function pintarResumenConError(mensaje) {
     $("restante-etiqueta").textContent = "Falta por recibir";
     $("restante").textContent = "–";
     $("restante-detalle").textContent = `No se pudo cargar el resumen: ${mensaje}`;
+    estado.anunciar = false;
     $("btn-reintentar-resumen").hidden = false;
 
     $("barra-confirmado").style.width = "0%";
@@ -380,6 +394,12 @@ function pintarResumen(datos) {
     $("objetivo").textContent = formatearDinero(datos.objetivo);
     // Con el formato del resto de la app ("1070,00 €"), no el de la API ("1070.00")
     $("nuevo-objetivo").placeholder = `Actual: ${formatearDinero(datos.objetivo)}`;
+
+    if (estado.anunciar) {
+        estado.anunciar = false;
+        $("anuncios").textContent = `${$("titulo-resumen").textContent}. ` +
+            `${$("restante-etiqueta").textContent}: ${$("restante").textContent}`;
+    }
 }
 
 
@@ -578,7 +598,10 @@ function crearElemento(t) {
         const etiquetaMes = elemento.querySelector(".etiqueta-mes");
         etiquetaMes.hidden = false;
         etiquetaMes.textContent = desplazamiento > 0 ? "Adelantada" : "Atrasada";
-        etiquetaMes.title = `Recibida en ${nombreMes(t.fecha.slice(0, 7)).toLowerCase()}, ` +
+        // En texto visible: un "title" no se ve en el móvil ni con teclado.
+        const cuenta = elemento.querySelector(".movimiento-cuenta");
+        cuenta.hidden = false;
+        cuenta.textContent = `Recibida en ${nombreMes(t.fecha.slice(0, 7)).toLowerCase()} · ` +
             `cuenta para ${nombreMes(t.mes_cuenta).toLowerCase()}`;
     }
 
@@ -598,6 +621,7 @@ function crearElemento(t) {
     confirmar.setAttribute("aria-label", `${confirmar.textContent}: ${descripcion}`);
 
     // Las confirmadas no se pueden editar ni eliminar (el servidor también lo impide).
+    elemento.querySelector(".movimiento-pista").hidden = !t.confirmada;
     for (const accion of ["editar", "eliminar"]) {
         const boton = elemento.querySelector(`[data-accion=${accion}]`);
         if (t.confirmada) boton.remove();
@@ -878,6 +902,7 @@ function pintarTituloNueva() {
 
 function elegirPersona(nombre) {
     estado.persona = nombre;
+    estado.anunciar = true;
     guardarPreferencia("persona", nombre);
     pintarTituloNueva();
     recargar();
@@ -1039,6 +1064,7 @@ function cambiarMes(mes) {
     const mismoMes = mes === estado.mes;
     if (!mismoMes) {
         estado.mes = mes;
+        estado.anunciar = true;
         proponerFecha();
     }
     pintarMes();
@@ -1054,6 +1080,14 @@ document.addEventListener("DOMContentLoaded", () => {
     $("form-login").addEventListener("submit", entrar);
     $("btn-logout").addEventListener("click", salir);
 
+    // Firefox y Safari de escritorio no tienen selector de mes: sería un texto
+    // invisible. Sin él se queda el nombre del mes y se cambia con las flechas.
+    if ($("filtro-mes").type === "month") {
+        prepararTeclado($("filtro-mes"));
+    } else {
+        $("filtro-mes").hidden = true;
+        $("texto-mes").removeAttribute("aria-hidden");
+    }
     $("filtro-mes").addEventListener("change", (evento) => cambiarMes(evento.target.value));
     // En ordenador, un clic en la caja no abre el calendario por sí solo: se pide.
     $("filtro-mes").addEventListener("click", (evento) => {
