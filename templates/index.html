@@ -176,7 +176,9 @@
 
                 <!-- NUEVA TRANSFERENCIA -->
                 <section class="tarjeta" aria-labelledby="titulo-nueva">
-                    <h2 id="titulo-nueva">Nueva transferencia</h2>
+                    <!-- En móvil empieza plegado (app.js), para que el historial quede cerca del resumen -->
+                    <details id="plegable-nueva" class="plegable" open>
+                    <summary><h2 id="titulo-nueva">Nueva transferencia</h2></summary>
                     <form id="form-nueva" class="formulario" novalidate>
                         <div class="campos-linea">
                             <div class="campo">
@@ -208,6 +210,7 @@
                         </div>
                         <button id="btn-agregar" type="submit" class="boton primario ancho">Añadir transferencia</button>
                     </form>
+                    </details>
                 </section>
             </div>
 

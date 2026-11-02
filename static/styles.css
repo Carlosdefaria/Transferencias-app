@@ -677,6 +677,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 }
 .plegable[open] summary::after { transform: rotate(180deg); }
 .plegable[open] > .formulario { margin-top: .75rem; }
+.plegable summary h2 { color: var(--texto); }
 
 
 /* ---------- Historial ---------- */
@@ -753,6 +754,10 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     gap: .5rem;
     margin-top: .7rem;
 }
+
+/* Destaca un momento la transferencia recién añadida */
+.movimiento.recien { animation: resaltar 2s ease-out; }
+@keyframes resaltar { from { box-shadow: 0 0 0 3px var(--primario); } to { box-shadow: 0 0 0 3px transparent; } }
 
 /* Filas de carga (esqueleto) */
 .movimiento.esqueleto {

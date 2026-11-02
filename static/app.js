@@ -8,6 +8,10 @@
 
 const $ = (id) => document.getElementById(id);
 
+// Las mismas medidas que la rejilla de styles.css: por debajo, una sola columna.
+const PANTALLA_ESTRECHA = window.matchMedia("(max-width: 899px)");
+const PANTALLA_TACTIL = window.matchMedia("(pointer: coarse)");
+
 const estado = {
     persona: null,   // se elige al cargar la lista de personas
     personas: [],
@@ -511,11 +515,13 @@ function pintarEsqueleto() {
     }
 }
 
-async function cargarTransferencias(version) {
+// "silenciosa": sin esqueleto, para las recargas tras una acción. La lista sigue
+// a la vista hasta que llegan los datos, sin parpadeo ni saltos de scroll.
+async function cargarTransferencias(version, silenciosa) {
     const lista = $("lista-transferencias");
     lista.setAttribute("aria-busy", "true");
     mostrarEstadoLista("", "");
-    pintarEsqueleto();
+    if (!silenciosa) pintarEsqueleto();
 
     try {
         const datos = await api(consulta("/transferencias", {
@@ -621,7 +627,7 @@ async function alternarConfirmacion(id, boton) {
     try {
         const { confirmada } = await api(`/transferencias/${id}/confirmar`, { metodo: "PATCH" });
         avisar(confirmada ? "Transferencia confirmada" : "Transferencia marcada como pendiente");
-        await recargar();
+        await recargar({ silenciosa: true });
         devolverFoco(id, "confirmar");
     } catch (error) {
         avisar(error.message, "error");
@@ -635,7 +641,7 @@ async function eliminar(id, boton) {
     try {
         await api(`/transferencias/${id}`, { metodo: "DELETE" });
         avisar("Transferencia eliminada");
-        await recargar();
+        await recargar({ silenciosa: true });
         devolverFoco(id, "eliminar");
     } catch (error) {
         avisar(error.message, "error");
@@ -749,7 +755,7 @@ async function agregarTransferencia(evento) {
     const mesCuenta = $("mes-cuenta").value;
     const restaurar = ocupar($("btn-agregar"), "Guardando…");
     try {
-        await api("/transferencias", {
+        const { id } = await api("/transferencias", {
             metodo: "POST",
             datos: {
                 monto: monto.value,
@@ -764,9 +770,15 @@ async function agregarTransferencia(evento) {
         $("descripcion").value = "";
         // La próxima vuelve a contar por defecto para el mes de su fecha.
         pintarOpcionesMes($("mes-cuenta"), fecha.value);
+        // En móvil se pliega el formulario para ver el historial.
+        if (PANTALLA_ESTRECHA.matches) $("plegable-nueva").open = false;
         // Se muestra el mes para el que cuenta la transferencia recién creada.
-        cambiarMes(mesCuenta);
-        monto.focus();
+        await cambiarMes(mesCuenta);
+        $("lista-transferencias").querySelector(`.movimiento[data-id="${id}"]`)?.classList.add("recien");
+        // Con teclado físico se sigue añadiendo; en táctil, enfocar el campo
+        // reabriría el teclado en pantalla, que tapa la lista y los avisos.
+        if (PANTALLA_ESTRECHA.matches || PANTALLA_TACTIL.matches) devolverFoco(id, "confirmar");
+        else monto.focus();
     } catch (error) {
         avisar(error.message, "error");
     } finally {
@@ -792,7 +804,7 @@ async function guardarObjetivo(evento) {
         avisar("Objetivo actualizado");
         input.value = "";
         evento.target.closest("details").open = false;
-        recargar();
+        recargar({ silenciosa: true });
     } catch (error) {
         mostrarErrorCampo(input, "error-objetivo", error.message);
     } finally {
@@ -979,10 +991,10 @@ async function agregarPersona(evento) {
 // El resumen y el historial se cargan siempre juntos y con el mismo mes.
 // Devuelve una promesa que termina cuando los dos están pintados (las dos
 // cargas gestionan sus propios errores, así que nunca falla).
-function recargar() {
+function recargar({ silenciosa = false } = {}) {
     estado.version += 1;
     marcarMesesCompletos();
-    return Promise.all([cargarResumen(estado.version), cargarTransferencias(estado.version)]);
+    return Promise.all([cargarResumen(estado.version), cargarTransferencias(estado.version, silenciosa)]);
 }
 
 function pintarMes() {
@@ -996,12 +1008,13 @@ function pintarMes() {
 
 function cambiarMes(mes) {
     if (!/^\d{4}-\d{2}$/.test(mes)) return Promise.resolve();
-    if (mes !== estado.mes) {
+    const mismoMes = mes === estado.mes;
+    if (!mismoMes) {
         estado.mes = mes;
         proponerFecha();
     }
     pintarMes();
-    return recargar();
+    return recargar({ silenciosa: mismoMes });
 }
 
 
@@ -1028,6 +1041,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     $("btn-reintentar-resumen").addEventListener("click", recargar);
+    $("plegable-nueva").open = !PANTALLA_ESTRECHA.matches;
     $("form-nueva").addEventListener("submit", agregarTransferencia);
     $("fecha").addEventListener("change", () => {
         alCambiarFecha($("fecha"), $("mes-cuenta"));
