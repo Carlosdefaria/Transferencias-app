@@ -29,6 +29,7 @@
 <div id="vista-carga" class="vista-carga" aria-busy="true">
     <span class="spinner" aria-hidden="true"></span>
     <span class="sr-only">Cargando…</span>
+    <noscript><p>Esta aplicación necesita JavaScript para funcionar.</p></noscript>
 </div>
 
 <!-- LOGIN -->
@@ -71,7 +72,7 @@
     <dialog id="dialogo-personas" class="dialogo" aria-labelledby="titulo-personas">
         <div class="dialogo-cabecera">
             <h2 id="titulo-personas">Personas</h2>
-            <button id="btn-cerrar-personas" type="button" class="boton icono fantasma" aria-label="Cerrar">×</button>
+            <button id="btn-cerrar-personas" type="button" class="boton icono fantasma" aria-label="Cerrar"><span class="ico ico-cerrar" aria-hidden="true"></span></button>
         </div>
 
         <!-- Los avisos van aquí dentro mientras la ventana está abierta; si no, quedarían detrás -->
@@ -104,12 +105,12 @@
         <!-- FILTROS: persona y mes -->
         <section class="controles" aria-label="Filtros">
             <!-- Los botones de cada persona los crea app.js con los datos de /personas -->
-            <fieldset id="selector-personas" class="segmentado">
+            <fieldset id="selector-personas" class="segmentado" hidden>
                 <legend class="sr-only">Persona</legend>
             </fieldset>
 
             <div class="selector-mes">
-                <button id="mes-anterior" type="button" class="boton icono" aria-label="Mes anterior">‹</button>
+                <button id="mes-anterior" type="button" class="boton icono" aria-label="Mes anterior"><span class="ico ico-izquierda" aria-hidden="true"></span></button>
                 <!-- Se muestra el mes en español; el selector nativo queda encima,
                      invisible, para que al tocar se abra el calendario del móvil -->
                 <div class="caja-mes">
@@ -117,7 +118,7 @@
                     <label for="filtro-mes" class="sr-only">Mes</label>
                     <input type="month" id="filtro-mes" required>
                 </div>
-                <button id="mes-siguiente" type="button" class="boton icono" aria-label="Mes siguiente">›</button>
+                <button id="mes-siguiente" type="button" class="boton icono" aria-label="Mes siguiente"><span class="ico ico-derecha" aria-hidden="true"></span></button>
             </div>
 
             <!-- Solo se muestra cuando se está viendo otro mes (pintarMes) -->
@@ -128,7 +129,7 @@
             <div class="columna">
                 <!-- RESUMEN DEL MES -->
                 <section id="resumen" class="tarjeta resumen" aria-labelledby="titulo-resumen" aria-busy="true">
-                    <h2 id="titulo-resumen" class="resumen-titulo">Resumen</h2>
+                    <h2 id="titulo-resumen">Resumen</h2>
 
                     <div class="resumen-principal">
                         <p id="restante-etiqueta" class="etiqueta-dato">Falta por recibir</p>
@@ -185,7 +186,7 @@
                     <form id="form-nueva" class="formulario" novalidate>
                         <div class="campos-linea">
                             <div class="campo">
-                                <label for="monto" class="etiqueta">Monto (€)</label>
+                                <label for="monto" class="etiqueta">Importe (€)</label>
                                 <input id="monto" type="text" inputmode="decimal" autocomplete="off"
                                        required aria-describedby="error-monto">
                                 <p id="error-monto" class="error-campo"></p>
@@ -308,7 +309,7 @@
     <form class="formulario edicion" novalidate>
         <div class="campos-linea">
             <div class="campo">
-                <label class="etiqueta" data-para="monto">Monto (€)</label>
+                <label class="etiqueta" data-para="monto">Importe (€)</label>
                 <input name="monto" type="text" inputmode="decimal" autocomplete="off" required>
             </div>
             <div class="campo">
