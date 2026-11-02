@@ -103,12 +103,16 @@ function avisar(texto, tipo = "exito") {
     const aviso = document.createElement("div");
     aviso.className = `aviso-flotante ${tipo}`;
     aviso.textContent = texto;
+    // Los errores se anuncian enseguida (role="alert") y duran más en pantalla,
+    // para que dé tiempo a leerlos.
+    const esError = tipo === "error";
+    if (esError) aviso.setAttribute("role", "alert");
     // Con la ventana de personas abierta, el aviso se muestra dentro de ella.
     const contenedor = document.querySelector("dialog[open] .avisos") || $("avisos");
     contenedor.append(aviso);
     // Como mucho 3 avisos a la vez: se quitan los más antiguos.
     while (contenedor.children.length > 3) contenedor.firstElementChild.remove();
-    setTimeout(() => aviso.remove(), 4000);
+    setTimeout(() => aviso.remove(), esError ? 8000 : 4000);
 }
 
 // Pone un botón en estado "cargando" y devuelve una función para restaurarlo.
