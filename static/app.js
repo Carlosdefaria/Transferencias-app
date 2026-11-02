@@ -617,6 +617,12 @@ function abrirEdicion(elemento) {
         campo.id = `editar-${etiqueta.dataset.para}-${id}`;
         etiqueta.htmlFor = campo.id;
     }
+    // El mensaje de error queda asociado a los campos que valida, como en el alta.
+    const error = formulario.querySelector(".error-campo");
+    error.id = `error-editar-${id}`;
+    for (const nombre of ["monto", "fecha"]) {
+        formulario.elements[nombre].setAttribute("aria-describedby", error.id);
+    }
     formulario.elements.monto.value = elemento.dataset.monto;
     formulario.elements.fecha.value = elemento.dataset.fecha;
     formulario.elements.descripcion.value = elemento.dataset.descripcion;
@@ -653,10 +659,14 @@ async function guardarEdicion(evento, id) {
     const formulario = evento.target;
     const { monto, fecha, descripcion, mes_cuenta: mesCuenta } = formulario.elements;
     const error = formulario.querySelector(".error-campo");
+    limpiarErrorCampo(monto, error.id);
+    limpiarErrorCampo(fecha, error.id);
 
-    if (!monto.value || Number(monto.value) <= 0 || !fecha.value) {
-        error.textContent = "Monto y fecha son obligatorios";
-        return;
+    if (!monto.value || Number(monto.value) <= 0) {
+        return mostrarErrorCampo(monto, error.id, "Introduce un importe mayor que 0");
+    }
+    if (!fecha.value) {
+        return mostrarErrorCampo(fecha, error.id, "Elige una fecha");
     }
 
     const restaurar = ocupar(evento.submitter || formulario.querySelector("[type=submit]"), "Guardando…");
