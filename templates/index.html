@@ -86,9 +86,9 @@
                            aria-describedby="error-persona">
                 </div>
                 <div class="campo">
-                    <label for="objetivo-persona" class="etiqueta">Objetivo mensual (€)</label>
-                    <input id="objetivo-persona" type="number" inputmode="decimal" step="0.01" min="0.01"
-                           placeholder="1070">
+                    <label for="objetivo-persona" class="etiqueta">Objetivo mensual (€) <span class="texto-suave">(opcional)</span></label>
+                    <input id="objetivo-persona" type="text" inputmode="decimal" autocomplete="off"
+                           placeholder="1070" aria-describedby="error-persona">
                 </div>
             </div>
             <p id="error-persona" class="error-campo"></p>
@@ -165,8 +165,9 @@
                         <form id="form-objetivo" class="formulario" novalidate>
                             <div class="campo">
                                 <label for="nuevo-objetivo" class="etiqueta">Nuevo objetivo (€)</label>
-                                <input id="nuevo-objetivo" type="number" inputmode="decimal" step="0.01" min="0.01"
-                                       required aria-describedby="error-objetivo">
+                                <input id="nuevo-objetivo" type="text" inputmode="decimal" autocomplete="off"
+                                       required aria-describedby="ayuda-objetivo error-objetivo">
+                                <p id="ayuda-objetivo" class="ayuda">Se aplica a todos los meses, también a los anteriores.</p>
                                 <p id="error-objetivo" class="error-campo"></p>
                             </div>
                             <button type="submit" class="boton secundario">Guardar objetivo</button>
@@ -183,7 +184,7 @@
                         <div class="campos-linea">
                             <div class="campo">
                                 <label for="monto" class="etiqueta">Monto (€)</label>
-                                <input id="monto" type="number" inputmode="decimal" step="0.01" min="0.01"
+                                <input id="monto" type="text" inputmode="decimal" autocomplete="off"
                                        required aria-describedby="error-monto">
                                 <p id="error-monto" class="error-campo"></p>
                             </div>
@@ -208,6 +209,7 @@
                             <label for="descripcion" class="etiqueta">Descripción <span class="texto-suave">(opcional)</span></label>
                             <input id="descripcion" type="text" maxlength="200" autocomplete="off">
                         </div>
+                        <p id="error-nueva" class="error-campo" role="alert"></p>
                         <button id="btn-agregar" type="submit" class="boton primario ancho">Añadir transferencia</button>
                     </form>
                     </details>
@@ -303,7 +305,7 @@
         <div class="campos-linea">
             <div class="campo">
                 <label class="etiqueta" data-para="monto">Monto (€)</label>
-                <input name="monto" type="number" inputmode="decimal" step="0.01" min="0.01" required>
+                <input name="monto" type="text" inputmode="decimal" autocomplete="off" required>
             </div>
             <div class="campo">
                 <label class="etiqueta" data-para="fecha">Fecha</label>
