@@ -342,7 +342,8 @@ function pintarResumen(datos) {
     $("confirmado").textContent = formatearDinero(datos.total_confirmado);
     $("pendiente").textContent = formatearDinero(datos.pendiente);
     $("objetivo").textContent = formatearDinero(datos.objetivo);
-    $("nuevo-objetivo").placeholder = datos.objetivo;
+    // Con el formato del resto de la app ("1070,00 €"), no el de la API ("1070.00")
+    $("nuevo-objetivo").placeholder = `Actual: ${formatearDinero(datos.objetivo)}`;
 }
 
 
