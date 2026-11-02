@@ -28,7 +28,7 @@ App web Flask para controlar las transferencias mensuales que me envía mi padre
 - `backup.py`: copia de seguridad local con `pg_dump` (rutas de Windows por defecto, configurables con `BACKUP_DIR`/`PG_DUMP_PATH`), conserva `BACKUP_DIAS` días y no borra nada si el backup falla.
 - `Procfile` (`web: gunicorn app:app`), `runtime.txt` (python-3.11.9), `requirements.txt` (producción, UTF-8), `requirements-dev.txt` (añade pytest), `.env.example`.
 
-Rutas: `/`, `/login`, `/check-auth`, `/logout`, `/transferencias` (GET con `persona` y `mes` / POST), `/transferencias/<id>` (PUT/DELETE; no se permiten sobre confirmadas → 409), `/transferencias/<id>/confirmar` (PATCH), `/resumen`, `/objetivo`, `/personas` (GET/POST), `/personas/<id>` (PUT renombra / DELETE; 409 si tiene transferencias o es la última). Todas las de datos usan `@login_required`. Los importes viajan en JSON como texto con 2 decimales (`"1070.00"`) y las fechas como `YYYY-MM-DD`.
+Rutas: `/`, `/login`, `/check-auth`, `/logout`, `/transferencias` (GET con `persona` y `mes` / POST), `/transferencias/<id>` (PUT/DELETE; no se permiten sobre confirmadas → 409), `/transferencias/<id>/confirmar` (PATCH), `/resumen`, `/objetivo`, `/personas` (GET/POST), `/personas/<id>` (PUT renombra / DELETE; 409 si tiene transferencias o es la última). Todas las de datos usan `@login_required`. En la interfaz los importes se escriben en campos de texto (`inputmode="decimal"`) y `leerImporte()` acepta coma o punto. Los importes viajan en JSON como texto con 2 decimales (`"1070.00"`) y las fechas como `YYYY-MM-DD`.
 
 ## Stack
 Python 3.11 + Flask, HTML/CSS/JS básico (sin React), SQLite (`database.db`) en desarrollo y PostgreSQL (psycopg 3) en producción, Render + Gunicorn, Git/GitHub.

@@ -93,6 +93,15 @@ function formatearPorcentaje(valor) {
     return `${new Intl.NumberFormat("es-ES", { maximumFractionDigits: 1 }).format(valor)} %`;
 }
 
+// Convierte lo escrito en un importe para la API: acepta "1070,50", "1070.50" y
+// "1.070,50" y devuelve "1070.50". Devuelve null si no es válido o no es mayor
+// que 0. "1.070" sin coma no se acepta: no se sabe si son 1070 € o 1,07 €.
+function leerImporte(texto) {
+    let limpio = texto.replace(/[\s€]/g, "");
+    if (limpio.includes(",")) limpio = limpio.replace(/\./g, "").replace(",", ".");
+    return /^\d+(\.\d{1,2})?$/.test(limpio) && Number(limpio) > 0 ? limpio : null;
+}
+
 function guardarPreferencia(clave, valor) {
     try { localStorage.setItem(clave, valor); } catch { /* modo privado: no pasa nada */ }
 }
@@ -607,7 +616,7 @@ async function accionLista(evento) {
 
     if (boton.dataset.accion === "confirmar") await alternarConfirmacion(id, boton);
     if (boton.dataset.accion === "editar") abrirEdicion(elemento);
-    if (boton.dataset.accion === "eliminar") await eliminar(id, boton);
+    if (boton.dataset.accion === "eliminar") await eliminar(id, boton, elemento);
     if (boton.dataset.accion === "cancelar") cancelarEdicion(elemento);
 }
 
@@ -635,8 +644,11 @@ async function alternarConfirmacion(id, boton) {
     }
 }
 
-async function eliminar(id, boton) {
-    if (!confirm("¿Eliminar esta transferencia? No se puede deshacer.")) return;
+async function eliminar(id, boton, elemento) {
+    const { monto, fecha } = elemento.dataset;
+    const pregunta = `¿Eliminar la transferencia de ${formatearDinero(monto)} del ` +
+        `${formatearFechaNumerica(fecha)}? No se puede deshacer.`;
+    if (!confirm(pregunta)) return;
     const restaurar = ocupar(boton, "Eliminando…");
     try {
         await api(`/transferencias/${id}`, { metodo: "DELETE" });
@@ -665,7 +677,7 @@ function abrirEdicion(elemento) {
     for (const nombre of ["monto", "fecha"]) {
         formulario.elements[nombre].setAttribute("aria-describedby", error.id);
     }
-    formulario.elements.monto.value = elemento.dataset.monto;
+    formulario.elements.monto.value = elemento.dataset.monto.replace(".", ",");
     formulario.elements.fecha.value = elemento.dataset.fecha;
     formulario.elements.descripcion.value = elemento.dataset.descripcion;
 
@@ -704,8 +716,9 @@ async function guardarEdicion(evento, id) {
     limpiarErrorCampo(monto, error.id);
     limpiarErrorCampo(fecha, error.id);
 
-    if (!monto.value || Number(monto.value) <= 0) {
-        return mostrarErrorCampo(monto, error.id, "Introduce un importe mayor que 0");
+    const importe = leerImporte(monto.value);
+    if (!importe) {
+        return mostrarErrorCampo(monto, error.id, "Introduce un importe mayor que 0, como 1070,50");
     }
     if (!fecha.value) {
         return mostrarErrorCampo(fecha, error.id, "Elige una fecha");
@@ -716,7 +729,7 @@ async function guardarEdicion(evento, id) {
         await api(`/transferencias/${id}`, {
             metodo: "PUT",
             datos: {
-                monto: monto.value,
+                monto: importe,
                 fecha: fecha.value,
                 descripcion: descripcion.value,
                 mes_cuenta: mesCuenta.value,
@@ -744,9 +757,11 @@ async function agregarTransferencia(evento) {
     const fecha = $("fecha");
     limpiarErrorCampo(monto, "error-monto");
     limpiarErrorCampo(fecha, "error-fecha");
+    $("error-nueva").textContent = "";
 
-    if (!monto.value || Number(monto.value) <= 0) {
-        return mostrarErrorCampo(monto, "error-monto", "Introduce un importe mayor que 0");
+    const importe = leerImporte(monto.value);
+    if (!importe) {
+        return mostrarErrorCampo(monto, "error-monto", "Introduce un importe mayor que 0, como 1070,50");
     }
     if (!fecha.value) {
         return mostrarErrorCampo(fecha, "error-fecha", "Elige una fecha");
@@ -758,7 +773,7 @@ async function agregarTransferencia(evento) {
         const { id } = await api("/transferencias", {
             metodo: "POST",
             datos: {
-                monto: monto.value,
+                monto: importe,
                 fecha: fecha.value,
                 descripcion: $("descripcion").value,
                 persona: estado.persona,
@@ -780,7 +795,8 @@ async function agregarTransferencia(evento) {
         if (PANTALLA_ESTRECHA.matches || PANTALLA_TACTIL.matches) devolverFoco(id, "confirmar");
         else monto.focus();
     } catch (error) {
-        avisar(error.message, "error");
+        // Junto al formulario y sin desaparecer: lo escrito sigue ahí para corregirlo.
+        $("error-nueva").textContent = error.message;
     } finally {
         restaurar();
     }
@@ -791,15 +807,16 @@ async function guardarObjetivo(evento) {
     const input = $("nuevo-objetivo");
     limpiarErrorCampo(input, "error-objetivo");
 
-    if (!input.value || Number(input.value) <= 0) {
-        return mostrarErrorCampo(input, "error-objetivo", "Introduce un objetivo mayor que 0");
+    const objetivo = leerImporte(input.value);
+    if (!objetivo) {
+        return mostrarErrorCampo(input, "error-objetivo", "Introduce un objetivo mayor que 0, como 1070,50");
     }
 
     const restaurar = ocupar(evento.submitter || evento.target.querySelector("button"), "Guardando…");
     try {
         await api("/objetivo", {
             metodo: "POST",
-            datos: { objetivo: input.value, persona: estado.persona },
+            datos: { objetivo, persona: estado.persona },
         });
         avisar("Objetivo actualizado");
         input.value = "";
@@ -883,7 +900,7 @@ function pintarListaPersonas() {
         const eliminar = fila.querySelector("[data-accion=eliminar-persona]");
         if (n > 0 || unica) {
             eliminar.disabled = true;
-            detalle += n > 0 ? " · no se puede eliminar" : " · es la única persona";
+            detalle += n > 0 ? " · tiene transferencias, no se puede eliminar" : " · es la única persona";
         }
         eliminar.setAttribute("aria-label", `Eliminar a ${p.nombre}`);
         fila.querySelector("[data-accion=renombrar]").setAttribute("aria-label", `Renombrar a ${p.nombre}`);
@@ -908,6 +925,10 @@ function abrirRenombrar(fila) {
     campo.id = `renombrar-${fila.dataset.id}`;
     formulario.querySelector("label").htmlFor = campo.id;
     campo.value = fila.dataset.nombre;
+    // El mensaje de error queda asociado al campo, como en el alta.
+    const error = formulario.querySelector(".error-campo");
+    error.id = `error-renombrar-${fila.dataset.id}`;
+    campo.setAttribute("aria-describedby", error.id);
 
     formulario.addEventListener("submit", (evento) => guardarNombre(evento, fila.dataset.id, fila.dataset.nombre));
     fila.replaceChildren(formulario);
@@ -917,12 +938,13 @@ function abrirRenombrar(fila) {
 async function guardarNombre(evento, id, nombreAnterior) {
     evento.preventDefault();
     const formulario = evento.target;
-    const nombre = formulario.elements.nombre.value.trim();
+    const campo = formulario.elements.nombre;
+    const nombre = campo.value.trim();
     const error = formulario.querySelector(".error-campo");
+    limpiarErrorCampo(campo, error.id);
 
     if (!nombre) {
-        error.textContent = "Escribe un nombre";
-        return;
+        return mostrarErrorCampo(campo, error.id, "Escribe un nombre");
     }
 
     const restaurar = ocupar(evento.submitter || formulario.querySelector("[type=submit]"), "Guardando…");
@@ -936,7 +958,7 @@ async function guardarNombre(evento, id, nombreAnterior) {
         await cargarPersonas();
         recargar();
     } catch (e) {
-        error.textContent = e.message;
+        mostrarErrorCampo(campo, error.id, e.message);
         restaurar();
     }
 }
@@ -961,16 +983,22 @@ async function agregarPersona(evento) {
     const nombre = $("nombre-persona");
     const objetivo = $("objetivo-persona");
     limpiarErrorCampo(nombre, "error-persona");
+    limpiarErrorCampo(objetivo, "error-persona");
 
     if (!nombre.value.trim()) {
         return mostrarErrorCampo(nombre, "error-persona", "Escribe un nombre");
+    }
+    // Es opcional: vacío, el servidor pone el objetivo inicial.
+    const importe = objetivo.value.trim() ? leerImporte(objetivo.value) : "";
+    if (importe === null) {
+        return mostrarErrorCampo(objetivo, "error-persona", "Introduce un objetivo mayor que 0, como 1070,50");
     }
 
     const restaurar = ocupar($("btn-persona"), "Guardando…");
     try {
         const persona = await api("/personas", {
             metodo: "POST",
-            datos: { nombre: nombre.value, objetivo: objetivo.value },
+            datos: { nombre: nombre.value, objetivo: importe },
         });
         avisar(`Persona añadida: ${persona.nombre}`);
         nombre.value = "";
