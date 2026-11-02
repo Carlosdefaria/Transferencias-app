@@ -20,8 +20,6 @@
 </head>
 <body>
 
-<a class="saltar" href="#principal">Saltar al contenido</a>
-
 <!-- Avisos temporales (éxito / error). aria-live hace que un lector de pantalla los lea. -->
 <div id="avisos" class="avisos" role="status" aria-live="polite"></div>
 
@@ -49,6 +47,9 @@
 
 <!-- APP -->
 <div id="vista-app" hidden>
+    <!-- Dentro de la app: en el login el destino (#principal) está oculto -->
+    <a class="saltar" href="#principal">Saltar al contenido</a>
+
     <header class="cabecera">
         <div class="cabecera-interior">
             <p class="cabecera-titulo">
