@@ -136,6 +136,14 @@ h2 { font-size: 1.05rem; font-weight: 650; }
     align-content: start;
 }
 
+/* Tablet: aún no caben dos columnas (las cifras y la fecha se cortan), así
+   que la columna única se limita y se centra para que los campos no midan
+   700 px. La cabecera se alinea con ella. */
+@media (min-width: 600px) and (max-width: 899px) {
+    .contenedor,
+    .cabecera .cabecera-interior { max-width: 680px; } /* .cabecera delante: su regla base va más abajo */
+}
+
 @media (min-width: 900px) {
     .rejilla { grid-template-columns: 1fr 1fr; gap: 1.25rem; }
     .contenedor { padding: 1.5rem 1.5rem 3rem; }
