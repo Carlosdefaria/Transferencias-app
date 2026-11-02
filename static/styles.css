@@ -387,7 +387,9 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 }
 .login-tarjeta h1 { font-size: 1.35rem; }
 .login-tarjeta .etiqueta { text-align: left; }
-.login-tarjeta input { text-align: center; font-size: 1.4rem; letter-spacing: .4em; }
+/* letter-spacing añade espacio también tras el último dígito, lo que
+   desplaza el PIN a la izquierda; text-indent lo compensa */
+.login-tarjeta input { text-align: center; font-size: 1.4rem; letter-spacing: .4em; text-indent: .4em; }
 
 .logo {
     width: 56px; height: 56px;
