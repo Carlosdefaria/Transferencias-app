@@ -75,7 +75,12 @@
 /* ---------- Base ---------- */
 *, *::before, *::after { box-sizing: border-box; }
 
-html { -webkit-text-size-adjust: 100%; }
+html {
+    -webkit-text-size-adjust: 100%;
+    /* Al saltar a un elemento (tabulador, enlace "Saltar al contenido"), deja
+       sitio para la cabecera fija y que no quede tapado debajo de ella */
+    scroll-padding-top: 5rem;
+}
 
 body {
     margin: 0;
