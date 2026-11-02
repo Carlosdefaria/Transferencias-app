@@ -362,17 +362,77 @@ function pintarOpcionesMes(select, fecha, desplazamiento = 0) {
 
     select.replaceChildren(...[0, 1].map((d) => {
         const mes = sumarMeses(base, d);
-        const opcion = new Option(nombreMes(mes) + (d === 0 ? " (mes actual)" : " (adelantada)"), mes);
+        const texto = nombreMes(mes) + (d === 0 ? " (mes actual)" : " (adelantada)");
+        const opcion = new Option(texto, mes);
         opcion.dataset.desplazamiento = d;
+        opcion.dataset.texto = texto;   // marcarMesesCompletos() le añade "completo"
         return opcion;
     }));
     select.value = sumarMeses(base, desplazamiento === 1 ? 1 : 0);
+    delete select.dataset.autoElegido;
 }
 
-// Si cambia la fecha, se mantiene la elección relativa ("el mes siguiente").
+// Si cambia la fecha, se mantiene la elección relativa ("el mes siguiente"),
+// salvo que el adelanto lo eligiera la app por estar completo el mes.
 function alCambiarFecha(inputFecha, select) {
     const elegida = select.selectedOptions[0];
-    pintarOpcionesMes(select, inputFecha.value, Number(elegida?.dataset.desplazamiento || 0));
+    const desplazamiento = select.dataset.autoElegido ? 0 : Number(elegida?.dataset.desplazamiento || 0);
+    pintarOpcionesMes(select, inputFecha.value, desplazamiento);
+}
+
+// Cada comprobación incrementa este número; si llega una respuesta antigua
+// (por ejemplo, tras cambiar rápido la fecha o la persona), se ignora.
+let versionCompletos = 0;
+
+// En el formulario de nueva transferencia, desactiva el mes que ya tiene el
+// objetivo cumplido (lo confirmado llega al objetivo, igual que la barra
+// verde) y elige el otro. Es solo una ayuda de la interfaz: la API no lo
+// impide. Si los dos meses están completos, se dejan ambos con un aviso para
+// no quedarse nunca sin poder guardar.
+async function marcarMesesCompletos() {
+    const select = $("mes-cuenta");
+    const ayuda = $("ayuda-mes-cuenta");
+    if (!$("fecha").value || !estado.persona) return;
+
+    const version = ++versionCompletos;
+    const meses = [...select.options].map((opcion) => opcion.value);
+    let completos;
+    try {
+        completos = await Promise.all(meses.map(async (mes) => {
+            const datos = await api(consulta("/resumen", { persona: estado.persona, mes }));
+            return Number(datos.restante) <= 0;
+        }));
+    } catch {
+        return;   // sin datos, el selector se queda como estaba
+    }
+    if (version !== versionCompletos) return;
+
+    const todos = completos.every(Boolean);
+    [...select.options].forEach((opcion, i) => {
+        opcion.disabled = completos[i] && !todos;
+        opcion.textContent = opcion.dataset.texto + (completos[i] ? " · completo" : "");
+    });
+
+    // Si lo elegido quedó desactivado, se pasa al otro mes. Y si fue la app
+    // quien eligió el adelanto y el mes vuelve a tener hueco, se deshace.
+    const [delMes, siguiente] = select.options;
+    if (select.selectedOptions[0]?.disabled) {
+        select.value = siguiente.disabled ? delMes.value : siguiente.value;
+        select.dataset.autoElegido = "1";
+    } else if (select.dataset.autoElegido && !delMes.disabled) {
+        select.value = delMes.value;
+        delete select.dataset.autoElegido;
+    }
+
+    ayuda.dataset.normal ??= ayuda.textContent;
+    if (todos) {
+        ayuda.textContent = "Los dos meses ya tienen el objetivo cumplido.";
+    } else if (delMes.disabled) {
+        ayuda.textContent = `${nombreMes(delMes.value)} ya tiene el objetivo cumplido, ` +
+            `así que cuenta para ${nombreMes(siguiente.value).toLowerCase()}.`;
+    } else {
+        ayuda.textContent = ayuda.dataset.normal;
+    }
 }
 
 
@@ -835,6 +895,7 @@ function recargar() {
     estado.version += 1;
     cargarResumen(estado.version);
     cargarTransferencias(estado.version);
+    marcarMesesCompletos();
 }
 
 function pintarMes() {
@@ -877,7 +938,10 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     $("form-nueva").addEventListener("submit", agregarTransferencia);
-    $("fecha").addEventListener("change", () => alCambiarFecha($("fecha"), $("mes-cuenta")));
+    $("fecha").addEventListener("change", () => {
+        alCambiarFecha($("fecha"), $("mes-cuenta"));
+        marcarMesesCompletos();
+    });
     prepararCampoFecha($("fecha"));
     $("form-objetivo").addEventListener("submit", guardarObjetivo);
     $("lista-transferencias").addEventListener("click", accionLista);
