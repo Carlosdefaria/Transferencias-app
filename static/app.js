@@ -362,7 +362,9 @@ function pintarOpcionesMes(select, fecha, desplazamiento = 0) {
 
     select.replaceChildren(...[0, 1].map((d) => {
         const mes = sumarMeses(base, d);
-        const texto = nombreMes(mes) + (d === 0 ? " (mes actual)" : " (adelantada)");
+        // El mes de la fecha va sin coletilla: "(mes actual)" era falso si la
+        // fecha es de otro mes. Solo se marca la opción del adelanto.
+        const texto = nombreMes(mes) + (d === 0 ? "" : " (adelantada)");
         const opcion = new Option(texto, mes);
         opcion.dataset.desplazamiento = d;
         opcion.dataset.texto = texto;   // marcarMesesCompletos() le añade "completo"
