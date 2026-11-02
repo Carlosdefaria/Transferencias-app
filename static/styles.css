@@ -610,8 +610,16 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     }
     .cifra-objetivo dd { margin: 0; }
 }
-.cifra-confirmado .punto { background: var(--confirmado); }
-.cifra-pendiente .punto { background: var(--pendiente-barra); }
+/* Los puntos son la leyenda de la barra: usan su mismo color de tramo
+   (--color-progreso), relleno para lo confirmado y rayado para lo pendiente */
+.cifra-confirmado .punto { background: var(--color-progreso); }
+.cifra-pendiente .punto {
+    border: 1.5px solid var(--color-progreso);
+    background: repeating-linear-gradient(
+        -45deg,
+        color-mix(in srgb, var(--color-progreso) 70%, transparent) 0 2px,
+        color-mix(in srgb, var(--color-progreso) 25%, transparent) 2px 4px);
+}
 
 
 /* Estado de carga: los números se atenúan mientras llegan los nuevos */
