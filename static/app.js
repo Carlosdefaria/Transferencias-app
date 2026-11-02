@@ -115,9 +115,11 @@ function avisar(texto, tipo = "exito") {
 function ocupar(boton, texto) {
     const original = boton.textContent;
     boton.disabled = true;
+    boton.setAttribute("aria-busy", "true");
     boton.textContent = texto;
     return () => {
         boton.disabled = false;
+        boton.removeAttribute("aria-busy");
         boton.textContent = original;
     };
 }

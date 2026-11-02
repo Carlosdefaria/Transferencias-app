@@ -233,7 +233,9 @@ h2 { font-size: 1.05rem; font-weight: 650; }
     transition: background-color .15s, border-color .15s, opacity .15s;
 }
 .boton:hover { background: var(--superficie-2); }
-.boton:disabled { opacity: .6; cursor: progress; }
+.boton:disabled { opacity: .6; cursor: not-allowed; }
+/* Solo mientras espera al servidor (ocupar() en app.js) */
+.boton[aria-busy="true"] { cursor: progress; }
 
 .boton.primario {
     background: var(--primario);
