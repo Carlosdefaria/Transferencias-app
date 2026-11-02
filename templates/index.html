@@ -22,6 +22,8 @@
 
 <!-- Avisos temporales (éxito / error). aria-live hace que un lector de pantalla los lea. -->
 <div id="avisos" class="avisos" role="status" aria-live="polite"></div>
+<!-- Solo para lectores de pantalla: lee el nuevo resumen al cambiar de mes o persona -->
+<div id="anuncios" class="sr-only" role="status" aria-live="polite"></div>
 
 <!-- Pantalla mientras se comprueba la sesión -->
 <div id="vista-carga" class="vista-carga" aria-busy="true">
@@ -96,7 +98,7 @@
         </form>
     </dialog>
 
-    <main id="principal" class="contenedor">
+    <main id="principal" class="contenedor" tabindex="-1">
         <h1 class="sr-only">Control de Transferencias</h1>
 
         <!-- FILTROS: persona y mes -->
@@ -262,11 +264,13 @@
             <time class="movimiento-fecha"></time>
             <span class="movimiento-desc"></span>
         </p>
+        <p class="ayuda movimiento-cuenta" hidden></p>
         <div class="movimiento-acciones">
             <button type="button" class="boton pequeno" data-accion="confirmar"></button>
             <button type="button" class="boton pequeno secundario" data-accion="editar">Editar</button>
             <button type="button" class="boton pequeno peligro" data-accion="eliminar">Eliminar</button>
         </div>
+        <p class="ayuda movimiento-pista" hidden>Para editarla o eliminarla, márcala antes como pendiente.</p>
     </li>
 </template>
 
