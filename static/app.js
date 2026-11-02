@@ -50,14 +50,6 @@ function nombreMes(mes) {
     return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
-// "2026-10-05" → "5 oct 2026". Se construye la fecha con año/mes/día
-// locales para evitar que la zona horaria la mueva al día anterior.
-function formatearFecha(iso) {
-    const [anio, mes, dia] = iso.split("-").map(Number);
-    return new Date(anio, mes - 1, dia)
-        .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" });
-}
-
 // "2026-10-28" → "28/10/2026"
 function formatearFechaNumerica(iso) {
     const [anio, mes, dia] = iso.split("-");
@@ -253,8 +245,11 @@ async function iniciar() {
 async function entrar(evento) {
     evento.preventDefault();
     const pin = $("pin").value.trim();
+    $("pin").removeAttribute("aria-invalid");
     if (!pin) {
         $("error-login").textContent = "Introduce el PIN";
+        $("pin").setAttribute("aria-invalid", "true");
+        $("pin").focus();
         return;
     }
 
@@ -266,6 +261,7 @@ async function entrar(evento) {
         $("principal").focus();   // el botón de entrar ya no se ve: el foco no se pierde
     } catch (error) {
         $("error-login").textContent = error.codigo === 401 ? "PIN incorrecto" : error.message;
+        $("pin").setAttribute("aria-invalid", "true");
         $("pin").select();
     } finally {
         restaurar();
@@ -371,7 +367,7 @@ function pintarResumen(datos) {
             : "";
     }
 
-    // Barra: la parte verde es lo confirmado y la rayada lo pendiente.
+    // Barra: la parte sólida es lo confirmado y la rayada lo pendiente.
     const confirmadoPct = Math.min(datos.porcentaje, 100);
     const pendientePct = Math.min(datos.porcentaje_pendiente, 100 - confirmadoPct);
     $("barra-confirmado").style.width = `${confirmadoPct}%`;
@@ -513,7 +509,7 @@ async function marcarMesesCompletos() {
 // HISTORIAL
 // -----------------------------------------------------
 
-function mostrarEstadoLista(tipo, texto, alReintentar = null) {
+function mostrarEstadoLista(tipo, texto, alPulsar = null, textoBoton = "Reintentar") {
     const caja = $("estado-lista");
     caja.replaceChildren();
     caja.className = `estado-lista ${tipo}`;
@@ -523,12 +519,12 @@ function mostrarEstadoLista(tipo, texto, alReintentar = null) {
     parrafo.textContent = texto;
     caja.append(parrafo);
 
-    if (alReintentar) {
+    if (alPulsar) {
         const boton = document.createElement("button");
         boton.type = "button";
         boton.className = "boton secundario pequeno";
-        boton.textContent = "Reintentar";
-        boton.addEventListener("click", alReintentar);
+        boton.textContent = textoBoton;
+        boton.addEventListener("click", alPulsar);
         caja.append(boton);
     }
 }
@@ -577,7 +573,8 @@ function pintarTransferencias(datos) {
     const n = transferencias.length;
     $("contador").textContent = n === 1 ? "1 transferencia" : `${n} transferencias`;
     if (n === 0) {
-        mostrarEstadoLista("vacio", `No hay transferencias en ${nombreMes(datos.mes).toLowerCase()}.`);
+        mostrarEstadoLista("vacio", `No hay transferencias en ${nombreMes(datos.mes).toLowerCase()}.`,
+            abrirFormularioNueva, "Añadir transferencia");
     }
 }
 
@@ -607,16 +604,16 @@ function crearElemento(t) {
 
     elemento.querySelector(".movimiento-monto").textContent = formatearDinero(t.monto);
     const etiqueta = elemento.querySelector(".estado");
-    etiqueta.textContent = t.confirmada ? "✓ Confirmada" : "Pendiente";
+    etiqueta.textContent = t.confirmada ? "Confirmada" : "Pendiente";
 
     const fecha = elemento.querySelector(".movimiento-fecha");
     fecha.dateTime = t.fecha;
-    fecha.textContent = formatearFecha(t.fecha);
+    fecha.textContent = formatearFechaNumerica(t.fecha);
     elemento.querySelector(".movimiento-desc").textContent = t.descripcion || "Sin descripción";
 
-    const descripcion = t.descripcion || formatearFecha(t.fecha);
+    const descripcion = t.descripcion || formatearFechaNumerica(t.fecha);
     const confirmar = elemento.querySelector("[data-accion=confirmar]");
-    confirmar.textContent = t.confirmada ? "Desconfirmar" : "Confirmar";
+    confirmar.textContent = t.confirmada ? "Marcar pendiente" : "Confirmar";
     confirmar.classList.add(t.confirmada ? "secundario" : "exito");
     confirmar.setAttribute("aria-label", `${confirmar.textContent}: ${descripcion}`);
 
@@ -628,6 +625,11 @@ function crearElemento(t) {
         else boton.setAttribute("aria-label", `${boton.textContent}: ${descripcion}`);
     }
     return elemento;
+}
+
+function abrirFormularioNueva() {
+    $("plegable-nueva").open = true;
+    $("monto").focus();
 }
 
 // Un solo "escuchador" para todos los botones de la lista (delegación de
