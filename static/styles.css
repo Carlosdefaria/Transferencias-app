@@ -522,6 +522,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .resumen-titulo { color: var(--texto-suave); font-weight: 600; font-size: .95rem; }
 
 .resumen-principal { margin: .75rem 0 1rem; }
+.resumen-principal .boton { margin-top: .5rem; }
 
 .etiqueta-dato { font-size: .9rem; color: var(--texto-suave); font-weight: 600; }
 

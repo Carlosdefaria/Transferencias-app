@@ -271,8 +271,7 @@ async function cargarResumen(version) {
         pintarResumen(datos);
     } catch (error) {
         if (version !== estado.version) return;
-        $("restante").textContent = "–";
-        $("restante-detalle").textContent = `No se pudo cargar el resumen: ${error.message}`;
+        pintarResumenConError(error.message);
     } finally {
         if (version === estado.version) {
             tarjeta.setAttribute("aria-busy", "false");
@@ -296,11 +295,37 @@ function tramoProgreso(porcentaje, cumplido) {
     return TRAMOS.find((tramo) => porcentaje >= tramo.desde);
 }
 
+// Si el resumen no se puede cargar, no debe quedar ningún dato anterior a la
+// vista: podría ser de otra persona o de otro mes y parecer el actual.
+function pintarResumenConError(mensaje) {
+    $("titulo-resumen").textContent = `${nombreMes(estado.mes)} · ${estado.persona}`;
+
+    const tarjeta = $("resumen");
+    tarjeta.classList.remove("cumplido");
+    for (const { clase } of [...TRAMOS, TRAMO_CUMPLIDO]) tarjeta.classList.remove(clase);
+
+    $("restante-etiqueta").textContent = "Falta por recibir";
+    $("restante").textContent = "–";
+    $("restante-detalle").textContent = `No se pudo cargar el resumen: ${mensaje}`;
+    $("btn-reintentar-resumen").hidden = false;
+
+    $("barra-confirmado").style.width = "0%";
+    $("barra-pendiente").style.width = "0%";
+    $("barra").setAttribute("aria-valuenow", "0");
+    $("barra").setAttribute("aria-valuetext", "Sin datos");
+    $("estado-progreso").textContent = "";
+    $("texto-progreso").textContent = "–";
+
+    for (const id of ["confirmado", "pendiente", "objetivo"]) $(id).textContent = "–";
+    $("nuevo-objetivo").placeholder = "";
+}
+
 function pintarResumen(datos) {
     const restante = Number(datos.restante);
     const cumplido = restante <= 0;
 
     $("titulo-resumen").textContent = `${nombreMes(datos.mes)} · ${estado.persona}`;
+    $("btn-reintentar-resumen").hidden = true;
 
     $("resumen").classList.toggle("cumplido", cumplido);
     $("restante-etiqueta").textContent = cumplido ? "Objetivo cumplido · recibido" : "Falta por recibir";
@@ -986,6 +1011,7 @@ document.addEventListener("DOMContentLoaded", () => {
         $("mes-anterior").focus();
     });
 
+    $("btn-reintentar-resumen").addEventListener("click", recargar);
     $("form-nueva").addEventListener("submit", agregarTransferencia);
     $("fecha").addEventListener("change", () => {
         alCambiarFecha($("fecha"), $("mes-cuenta"));
