@@ -299,7 +299,6 @@ function tramoProgreso(porcentaje, cumplido) {
 // vista: podría ser de otra persona o de otro mes y parecer el actual.
 function pintarResumenConError(mensaje) {
     $("titulo-resumen").textContent = `${nombreMes(estado.mes)} · ${estado.persona}`;
-    $("aviso-moneda").hidden = true;
 
     const tarjeta = $("resumen");
     tarjeta.classList.remove("cumplido");
