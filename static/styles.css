@@ -13,7 +13,7 @@
     --tramo-lejos: #c0262d;
     --tramo-mitad: #a64b06;
     --tramo-casi: #2f4bd8;
-    --tramo-cumplido: #17804a;
+    --tramo-cumplido: #13703f;
 
     --fondo: #f4f6fa;
     --superficie: #ffffff;
@@ -24,7 +24,7 @@
     --primario: #2f4bd8;
     --primario-hover: #2539b0;
     --texto-sobre-primario: #ffffff;
-    --confirmado: #17804a;
+    --confirmado: #13703f; /* 5,4:1 sobre --confirmado-fondo (con #17804a era 4,35:1) */
     --confirmado-fondo: #e2f4ea;
     --pendiente: #9a5800;
     --pendiente-barra: #d98a12;
