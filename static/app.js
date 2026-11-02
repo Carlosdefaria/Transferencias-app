@@ -203,9 +203,7 @@ function mostrarLogin(mensaje = "") {
 
 async function mostrarApp() {
     mostrarVista("vista-app");
-    $("fecha").value = hoyISO();
-    pintarFecha($("fecha"));
-    pintarOpcionesMes($("mes-cuenta"), $("fecha").value);
+    proponerFecha();
     // Sin la lista de personas no se sabe qué datos pedir, así que va primero.
     try {
         await cargarPersonas();
@@ -404,6 +402,14 @@ function pintarOpcionesMes(select, fecha, desplazamiento = 0) {
     }));
     select.value = sumarMeses(base, desplazamiento === 1 ? 1 : 0);
     delete select.dataset.autoElegido;
+}
+
+// Propone en el formulario una fecha del mes que se está viendo: hoy si es el
+// mes actual y, si no, el día 1. Así lo añadido no acaba en otro mes por descuido.
+function proponerFecha() {
+    $("fecha").value = estado.mes === mesActual() ? hoyISO() : `${estado.mes}-01`;
+    pintarFecha($("fecha"));
+    pintarOpcionesMes($("mes-cuenta"), $("fecha").value);
 }
 
 // Si cambia la fecha, se mantiene la elección relativa ("el mes siguiente"),
@@ -710,7 +716,9 @@ async function guardarEdicion(evento, id) {
                 mes_cuenta: mesCuenta.value,
             },
         });
-        avisar("Transferencia actualizada");
+        avisar(mesCuenta.value === estado.mes
+            ? "Transferencia actualizada"
+            : `Transferencia actualizada y movida a ${nombreMes(mesCuenta.value).toLowerCase()}`);
         await cambiarMes(mesCuenta.value);
         devolverFoco(id, "editar");
     } catch (e) {
@@ -751,9 +759,7 @@ async function agregarTransferencia(evento) {
                 mes_cuenta: mesCuenta,
             },
         });
-        avisar(mesCuenta === fecha.value.slice(0, 7)
-            ? "Transferencia añadida"
-            : `Transferencia añadida a ${nombreMes(mesCuenta).toLowerCase()}`);
+        avisar(`Transferencia añadida a ${nombreMes(mesCuenta).toLowerCase()}`);
         monto.value = "";
         $("descripcion").value = "";
         // La próxima vuelve a contar por defecto para el mes de su fecha.
@@ -833,11 +839,18 @@ function pintarSelectorPersonas() {
     selector.replaceChildren(leyenda, ...opciones);
     // Con una sola persona el selector no aporta nada: su nombre ya sale en el resumen.
     selector.hidden = estado.personas.length < 2;
+    pintarTituloNueva();
+}
+
+// El formulario dice siempre a quién se le apunta la transferencia.
+function pintarTituloNueva() {
+    $("titulo-nueva").textContent = `Nueva transferencia · ${estado.persona}`;
 }
 
 function elegirPersona(nombre) {
     estado.persona = nombre;
     guardarPreferencia("persona", nombre);
+    pintarTituloNueva();
     recargar();
 }
 
@@ -983,7 +996,10 @@ function pintarMes() {
 
 function cambiarMes(mes) {
     if (!/^\d{4}-\d{2}$/.test(mes)) return Promise.resolve();
-    estado.mes = mes;
+    if (mes !== estado.mes) {
+        estado.mes = mes;
+        proponerFecha();
+    }
     pintarMes();
     return recargar();
 }
