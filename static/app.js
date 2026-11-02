@@ -562,7 +562,18 @@ async function accionLista(evento) {
     if (boton.dataset.accion === "confirmar") await alternarConfirmacion(id, boton);
     if (boton.dataset.accion === "editar") abrirEdicion(elemento);
     if (boton.dataset.accion === "eliminar") await eliminar(id, boton);
-    if (boton.dataset.accion === "cancelar") recargar();
+    if (boton.dataset.accion === "cancelar") cancelarEdicion(elemento);
+}
+
+// Tras repintar la lista, devuelve el foco a la misma transferencia para que
+// quien usa el teclado o un lector de pantalla no vuelva al principio de la
+// página. Si la fila ya no está (se eliminó o pasó a otro mes), va al título.
+function devolverFoco(id, accion) {
+    const fila = $("lista-transferencias").querySelector(`.movimiento[data-id="${id}"]`);
+    const destino = fila?.querySelector(`[data-accion=${accion}]`)
+        || fila?.querySelector("[data-accion]")
+        || $("titulo-historial");
+    destino.focus();
 }
 
 async function alternarConfirmacion(id, boton) {
@@ -570,7 +581,8 @@ async function alternarConfirmacion(id, boton) {
     try {
         const { confirmada } = await api(`/transferencias/${id}/confirmar`, { metodo: "PATCH" });
         avisar(confirmada ? "Transferencia confirmada" : "Transferencia marcada como pendiente");
-        recargar();
+        await recargar();
+        devolverFoco(id, "confirmar");
     } catch (error) {
         avisar(error.message, "error");
         restaurar();
@@ -583,7 +595,8 @@ async function eliminar(id, boton) {
     try {
         await api(`/transferencias/${id}`, { metodo: "DELETE" });
         avisar("Transferencia eliminada");
-        recargar();
+        await recargar();
+        devolverFoco(id, "eliminar");
     } catch (error) {
         avisar(error.message, "error");
         restaurar();
@@ -616,6 +629,21 @@ function abrirEdicion(elemento) {
     formulario.elements.monto.focus();
 }
 
+// Cancelar solo vuelve a pintar esta fila con sus datos originales (guardados
+// en data-*), sin recargar toda la lista. Solo se editan las pendientes.
+function cancelarEdicion(elemento) {
+    const fila = crearElemento({
+        id: elemento.dataset.id,
+        monto: elemento.dataset.monto,
+        fecha: elemento.dataset.fecha,
+        descripcion: elemento.dataset.descripcion,
+        mes_cuenta: elemento.dataset.mesCuenta,
+        confirmada: false,
+    });
+    elemento.replaceWith(fila);
+    fila.querySelector("[data-accion=editar]").focus();
+}
+
 async function guardarEdicion(evento, id) {
     evento.preventDefault();
     const formulario = evento.target;
@@ -639,7 +667,8 @@ async function guardarEdicion(evento, id) {
             },
         });
         avisar("Transferencia actualizada");
-        cambiarMes(mesCuenta.value);
+        await cambiarMes(mesCuenta.value);
+        devolverFoco(id, "editar");
     } catch (e) {
         error.textContent = e.message;
         restaurar();
@@ -891,11 +920,12 @@ async function agregarPersona(evento) {
 // -----------------------------------------------------
 
 // El resumen y el historial se cargan siempre juntos y con el mismo mes.
+// Devuelve una promesa que termina cuando los dos están pintados (las dos
+// cargas gestionan sus propios errores, así que nunca falla).
 function recargar() {
     estado.version += 1;
-    cargarResumen(estado.version);
-    cargarTransferencias(estado.version);
     marcarMesesCompletos();
+    return Promise.all([cargarResumen(estado.version), cargarTransferencias(estado.version)]);
 }
 
 function pintarMes() {
@@ -908,10 +938,10 @@ function pintarMes() {
 }
 
 function cambiarMes(mes) {
-    if (!/^\d{4}-\d{2}$/.test(mes)) return;
+    if (!/^\d{4}-\d{2}$/.test(mes)) return Promise.resolve();
     estado.mes = mes;
     pintarMes();
-    recargar();
+    return recargar();
 }
 
 
