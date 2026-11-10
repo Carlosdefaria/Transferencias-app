@@ -157,6 +157,11 @@
                             <dt><span class="punto" aria-hidden="true"></span>Pendiente</dt>
                             <dd id="pendiente">–</dd>
                         </div>
+                        <!-- Solo se muestra si en el mes se ha cogido dinero del pote (pintarResumen) -->
+                        <div id="cifra-retirado" class="cifra cifra-retirado" hidden>
+                            <dt>Retirado</dt>
+                            <dd id="retirado">–</dd>
+                        </div>
                         <div class="cifra cifra-objetivo">
                             <dt>Objetivo</dt>
                             <dd id="objetivo">–</dd>
@@ -184,6 +189,14 @@
                     <details id="plegable-nueva" class="plegable" open>
                     <summary><h2 id="titulo-nueva">Nueva transferencia</h2></summary>
                     <form id="form-nueva" class="formulario" novalidate>
+                        <!-- Una retirada es dinero que se coge del pote: resta en vez de sumar -->
+                        <fieldset class="segmentado selector-tipo">
+                            <legend class="sr-only">Tipo de movimiento</legend>
+                            <input type="radio" name="tipo" id="tipo-ingreso" value="ingreso" checked>
+                            <label for="tipo-ingreso">Recibida</label>
+                            <input type="radio" name="tipo" id="tipo-retirada" value="retirada">
+                            <label for="tipo-retirada">Retirada del pote</label>
+                        </fieldset>
                         <div class="campos-linea">
                             <div class="campo">
                                 <label for="monto" class="etiqueta">Importe (€)</label>
@@ -203,7 +216,7 @@
                             </div>
                         </div>
                         <div class="campo">
-                            <label for="mes-cuenta" class="etiqueta">Para el pote de</label>
+                            <label id="etiqueta-mes-cuenta" for="mes-cuenta" class="etiqueta">Para el pote de</label>
                             <!-- Las opciones (el mes de la fecha y el siguiente) las crea app.js; si un mes ya tiene el objetivo cumplido, se desactiva -->
                             <select id="mes-cuenta" aria-describedby="ayuda-mes-cuenta"></select>
                             <p id="ayuda-mes-cuenta" class="ayuda">Cámbialo si es un adelanto para el mes siguiente.</p>
@@ -257,6 +270,7 @@
         <div class="movimiento-cabecera">
             <span class="movimiento-monto"></span>
             <span class="movimiento-etiquetas">
+                <span class="etiqueta-retirada" hidden>Retirada</span>
                 <span class="etiqueta-mes" hidden></span>
                 <span class="estado"></span>
             </span>
@@ -307,6 +321,13 @@
 <!-- Plantilla del formulario de edición -->
 <template id="plantilla-edicion">
     <form class="formulario edicion" novalidate>
+        <div class="campo">
+            <label class="etiqueta" data-para="tipo">Tipo</label>
+            <select name="tipo">
+                <option value="ingreso">Recibida</option>
+                <option value="retirada">Retirada del pote</option>
+            </select>
+        </div>
         <div class="campos-linea">
             <div class="campo">
                 <label class="etiqueta" data-para="monto">Importe (€)</label>

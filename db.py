@@ -13,7 +13,7 @@ from decimal import Decimal
 
 import psycopg
 
-from logica import a_decimal, rango_mes
+from logica import INGRESO, TIPOS, a_decimal, rango_mes
 
 log = logging.getLogger(__name__)
 
@@ -91,7 +91,9 @@ def crear_tablas():
                 descripcion TEXT,
                 persona TEXT NOT NULL,
                 confirmada BOOLEAN DEFAULT {falso},
-                mes_cuenta TEXT
+                mes_cuenta TEXT,
+                tipo TEXT NOT NULL DEFAULT 'ingreso'
+                    CHECK (tipo IN ('ingreso', 'retirada'))
             )
         """)
         ejecutar(conn, f"""
@@ -122,7 +124,7 @@ def _fecha_a_texto(valor):
     return str(valor)[:10]
 
 
-_COLUMNAS_TRANSFERENCIA = "id, monto, fecha, descripcion, persona, confirmada, mes_cuenta"
+_COLUMNAS_TRANSFERENCIA = "id, monto, fecha, descripcion, persona, confirmada, mes_cuenta, tipo"
 
 # Una transferencia cuenta para el mes de "mes_cuenta" si lo tiene; si está
 # vacío (lo normal), para el mes de su fecha. Funciona igual en los dos motores.
@@ -148,6 +150,7 @@ def _fila_a_transferencia(fila):
         "confirmada": bool(fila[5]),
         # Siempre se devuelve el mes para el que cuenta, aunque sea el de la fecha
         "mes_cuenta": fila[6] or fecha[:7],
+        "tipo": fila[7],
     }
 
 
@@ -245,18 +248,23 @@ def listar_transferencias(conn, persona, mes):
 
 
 def sumar_por_estado(conn, persona, mes):
-    """Devuelve (total confirmado, total pendiente) del mes en Decimal."""
+    """Totales del mes en Decimal, por tipo y estado.
+
+    Devuelve un dict {(tipo, confirmada): total}, por ejemplo
+    {("ingreso", True): 1070.00, ("retirada", True): 50.00, ...}, con todas
+    las combinaciones (0.00 si no hay ninguna).
+    """
     filas = ejecutar(conn, f"""
-        SELECT confirmada, COALESCE(SUM(monto), 0)
+        SELECT tipo, confirmada, COALESCE(SUM(monto), 0)
         FROM transferencias
         WHERE {_FILTRO_MES}
-        GROUP BY confirmada
+        GROUP BY tipo, confirmada
     """, _parametros_mes(persona, mes)).fetchall()
 
-    totales = {True: Decimal("0.00"), False: Decimal("0.00")}
-    for confirmada, total in filas:
-        totales[bool(confirmada)] = a_decimal(total)
-    return totales[True], totales[False]
+    totales = {(tipo, estado): Decimal("0.00") for tipo in TIPOS for estado in (True, False)}
+    for tipo, confirmada, total in filas:
+        totales[(tipo, bool(confirmada))] = a_decimal(total)
+    return totales
 
 
 def obtener_transferencia(conn, id):
@@ -267,20 +275,22 @@ def obtener_transferencia(conn, id):
     return _fila_a_transferencia(fila) if fila else None
 
 
-def insertar_transferencia(conn, monto, fecha, descripcion, persona, mes_cuenta=None):
+def insertar_transferencia(conn, monto, fecha, descripcion, persona, mes_cuenta=None,
+                           tipo=INGRESO):
     return ejecutar(conn, """
-        INSERT INTO transferencias (monto, fecha, descripcion, persona, confirmada, mes_cuenta)
-        VALUES (%s, %s, %s, %s, %s, %s)
+        INSERT INTO transferencias (monto, fecha, descripcion, persona, confirmada, mes_cuenta, tipo)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
         RETURNING id
-    """, (monto, fecha, descripcion, persona, False, mes_cuenta)).fetchone()[0]
+    """, (monto, fecha, descripcion, persona, False, mes_cuenta, tipo)).fetchone()[0]
 
 
-def actualizar_transferencia(conn, id, monto, fecha, descripcion, mes_cuenta=None):
+def actualizar_transferencia(conn, id, monto, fecha, descripcion, mes_cuenta=None,
+                             tipo=INGRESO):
     ejecutar(conn, """
         UPDATE transferencias
-        SET monto = %s, fecha = %s, descripcion = %s, mes_cuenta = %s
+        SET monto = %s, fecha = %s, descripcion = %s, mes_cuenta = %s, tipo = %s
         WHERE id = %s
-    """, (monto, fecha, descripcion, mes_cuenta, id))
+    """, (monto, fecha, descripcion, mes_cuenta, tipo, id))
 
 
 def alternar_confirmacion(conn, id):

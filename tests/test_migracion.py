@@ -11,7 +11,7 @@ import psycopg
 import pytest
 
 from conftest import crear
-from migraciones import m001_numeric, m002_mes_cuenta
+from migraciones import m001_numeric, m002_mes_cuenta, m003_tipo
 
 pytestmark = pytest.mark.skipif(not os.environ.get("TEST_DATABASE_URL"),
                                 reason="Necesita TEST_DATABASE_URL (PostgreSQL)")
@@ -76,11 +76,12 @@ def test_si_falla_no_cambia_nada(conn_antigua):
 
 def test_la_app_funciona_antes_y_despues_de_migrar(conn_antigua, sesion):
     # 'sesion' ha creado tablas nuevas; se vuelve al esquema antiguo. El código
-    # actual necesita la columna de la migración 002, que se aplica antes de
-    # desplegarlo.
+    # actual necesita las columnas de las migraciones 002 y 003, que se
+    # aplican antes de desplegarlo.
     for sql in ESQUEMA_ANTIGUO:
         conn_antigua.execute(sql)
     m002_mes_cuenta.aplicar(conn_antigua)
+    m003_tipo.aplicar(conn_antigua)
     conn_antigua.commit()
 
     def resumen():
@@ -108,3 +109,16 @@ def test_m002_aplicar_y_revertir(conn_antigua):
     m002_mes_cuenta.revertir(conn_antigua)
     conn_antigua.commit()
     assert not m002_mes_cuenta.columna_existe(conn_antigua)
+
+
+def test_m003_aplicar_y_revertir(conn_antigua):
+    assert m003_tipo.comprobar(conn_antigua) is False
+    m003_tipo.aplicar(conn_antigua)
+    conn_antigua.commit()
+    assert m003_tipo.columna_existe(conn_antigua)
+    # Las transferencias que ya había quedan como ingresos
+    assert m003_tipo.contar_retiradas(conn_antigua) == 0
+
+    m003_tipo.revertir(conn_antigua)
+    conn_antigua.commit()
+    assert not m003_tipo.columna_existe(conn_antigua)

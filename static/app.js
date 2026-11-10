@@ -91,6 +91,17 @@ function formatearDinero(valor) {
     return `${numero} €`;
 }
 
+// "transferencia" o "retirada", para los textos de avisos y preguntas.
+function nombreTipo(tipo) {
+    return tipo === "retirada" ? "retirada" : "transferencia";
+}
+
+// Con mayúscula inicial, para empezar una frase ("Retirada añadida…").
+function nombreTipoFrase(tipo) {
+    const nombre = nombreTipo(tipo);
+    return nombre[0].toUpperCase() + nombre.slice(1);
+}
+
 function formatearPorcentaje(valor) {
     return `${new Intl.NumberFormat("es-ES", { maximumFractionDigits: 1 }).format(valor)} %`;
 }
@@ -312,7 +323,8 @@ function tramoProgreso(porcentaje, cumplido) {
     // "cumplido" viene de restante <= 0: así el verde coincide exactamente
     // con el mensaje "Objetivo cumplido", aunque el % esté redondeado.
     if (cumplido) return TRAMO_CUMPLIDO;
-    return TRAMOS.find((tramo) => porcentaje >= tramo.desde);
+    // Con retiradas el % puede ser negativo: entonces, el tramo más bajo.
+    return TRAMOS.find((tramo) => porcentaje >= tramo.desde) ?? TRAMOS[TRAMOS.length - 1];
 }
 
 // Si el resumen no se puede cargar, no debe quedar ningún dato anterior a la
@@ -337,7 +349,7 @@ function pintarResumenConError(mensaje) {
     $("estado-progreso").textContent = "";
     $("texto-progreso").textContent = "–";
 
-    for (const id of ["confirmado", "pendiente", "objetivo"]) $(id).textContent = "–";
+    for (const id of ["confirmado", "pendiente", "objetivo", "retirado"]) $(id).textContent = "–";
     $("nuevo-objetivo").placeholder = "";
 }
 
@@ -368,8 +380,9 @@ function pintarResumen(datos) {
     }
 
     // Barra: la parte sólida es lo confirmado y la rayada lo pendiente.
-    const confirmadoPct = Math.min(datos.porcentaje, 100);
-    const pendientePct = Math.min(datos.porcentaje_pendiente, 100 - confirmadoPct);
+    // Se recorta a 0–100: con retiradas, lo confirmado o lo pendiente pueden ser negativos.
+    const confirmadoPct = Math.max(0, Math.min(datos.porcentaje, 100));
+    const pendientePct = Math.max(0, Math.min(datos.porcentaje_pendiente, 100 - confirmadoPct));
     $("barra-confirmado").style.width = `${confirmadoPct}%`;
     $("barra-pendiente").style.width = `${pendientePct}%`;
     $("barra").setAttribute("aria-valuenow", String(Math.round(confirmadoPct)));
@@ -388,6 +401,11 @@ function pintarResumen(datos) {
     $("confirmado").textContent = formatearDinero(datos.total_confirmado);
     $("pendiente").textContent = formatearDinero(datos.pendiente);
     $("objetivo").textContent = formatearDinero(datos.objetivo);
+    // "Retirado" solo aparece si este mes se ha cogido dinero del pote.
+    const hayRetiradas = Number(datos.retirado) > 0;
+    $("retirado").textContent = formatearDinero(datos.retirado);
+    $("cifra-retirado").hidden = !hayRetiradas;
+    $("cifra-retirado").parentElement.classList.toggle("con-retirado", hayRetiradas);
     // Con el formato del resto de la app ("1070,00 €"), no el de la API ("1070.00")
     $("nuevo-objetivo").placeholder = `Actual: ${formatearDinero(datos.objetivo)}`;
 
@@ -587,7 +605,11 @@ function crearElemento(t) {
     elemento.dataset.fecha = t.fecha;
     elemento.dataset.descripcion = t.descripcion;
     elemento.dataset.mesCuenta = t.mes_cuenta;
+    elemento.dataset.tipo = t.tipo;
     elemento.classList.toggle("confirmada", t.confirmada);
+    const retirada = t.tipo === "retirada";
+    elemento.classList.toggle("movimiento-retirada", retirada);
+    elemento.querySelector(".etiqueta-retirada").hidden = !retirada;
 
     // Etiqueta si cuenta para un mes distinto al de su fecha
     const desplazamiento = mesesEntre(t.fecha.slice(0, 7), t.mes_cuenta);
@@ -598,11 +620,14 @@ function crearElemento(t) {
         // En texto visible: un "title" no se ve en el móvil ni con teclado.
         const cuenta = elemento.querySelector(".movimiento-cuenta");
         cuenta.hidden = false;
-        cuenta.textContent = `Recibida en ${nombreMes(t.fecha.slice(0, 7)).toLowerCase()} · ` +
-            `cuenta para ${nombreMes(t.mes_cuenta).toLowerCase()}`;
+        cuenta.textContent = `${retirada ? "Hecha" : "Recibida"} en ` +
+            `${nombreMes(t.fecha.slice(0, 7)).toLowerCase()} · ` +
+            `${retirada ? "resta de" : "cuenta para"} ${nombreMes(t.mes_cuenta).toLowerCase()}`;
     }
 
-    elemento.querySelector(".movimiento-monto").textContent = formatearDinero(t.monto);
+    // Las retiradas restan del pote: se muestran con un "−" delante.
+    elemento.querySelector(".movimiento-monto").textContent =
+        (retirada ? "−" : "") + formatearDinero(t.monto);
     const etiqueta = elemento.querySelector(".estado");
     etiqueta.textContent = t.confirmada ? "Confirmada" : "Pendiente";
 
@@ -658,10 +683,11 @@ function devolverFoco(id, accion) {
 }
 
 async function alternarConfirmacion(id, boton) {
+    const nombre = nombreTipoFrase(boton.closest(".movimiento").dataset.tipo);
     const restaurar = ocupar(boton, "Procesando…");
     try {
         const { confirmada } = await api(`/transferencias/${id}/confirmar`, { metodo: "PATCH" });
-        avisar(confirmada ? "Transferencia confirmada" : "Transferencia marcada como pendiente");
+        avisar(confirmada ? `${nombre} confirmada` : `${nombre} marcada como pendiente`);
         await recargar({ silenciosa: true });
         devolverFoco(id, "confirmar");
     } catch (error) {
@@ -671,14 +697,14 @@ async function alternarConfirmacion(id, boton) {
 }
 
 async function eliminar(id, boton, elemento) {
-    const { monto, fecha } = elemento.dataset;
-    const pregunta = `¿Eliminar la transferencia de ${formatearDinero(monto)} del ` +
+    const { monto, fecha, tipo } = elemento.dataset;
+    const pregunta = `¿Eliminar la ${nombreTipo(tipo)} de ${formatearDinero(monto)} del ` +
         `${formatearFechaNumerica(fecha)}? No se puede deshacer.`;
     if (!confirm(pregunta)) return;
     const restaurar = ocupar(boton, "Eliminando…");
     try {
         await api(`/transferencias/${id}`, { metodo: "DELETE" });
-        avisar("Transferencia eliminada");
+        avisar(`${nombreTipoFrase(tipo)} eliminada`);
         await recargar({ silenciosa: true });
         devolverFoco(id, "eliminar");
     } catch (error) {
@@ -706,6 +732,7 @@ function abrirEdicion(elemento) {
     formulario.elements.monto.value = elemento.dataset.monto.replace(".", ",");
     formulario.elements.fecha.value = elemento.dataset.fecha;
     formulario.elements.descripcion.value = elemento.dataset.descripcion;
+    formulario.elements.tipo.value = elemento.dataset.tipo;
 
     const { fecha, mes_cuenta: mesCuenta } = formulario.elements;
     pintarOpcionesMes(mesCuenta, elemento.dataset.fecha,
@@ -728,6 +755,7 @@ function cancelarEdicion(elemento) {
         fecha: elemento.dataset.fecha,
         descripcion: elemento.dataset.descripcion,
         mes_cuenta: elemento.dataset.mesCuenta,
+        tipo: elemento.dataset.tipo,
         confirmada: false,
     });
     elemento.replaceWith(fila);
@@ -737,7 +765,7 @@ function cancelarEdicion(elemento) {
 async function guardarEdicion(evento, id) {
     evento.preventDefault();
     const formulario = evento.target;
-    const { monto, fecha, descripcion, mes_cuenta: mesCuenta } = formulario.elements;
+    const { monto, fecha, descripcion, tipo, mes_cuenta: mesCuenta } = formulario.elements;
     const error = formulario.querySelector(".error-campo");
     limpiarErrorCampo(monto, error.id);
     limpiarErrorCampo(fecha, error.id);
@@ -759,11 +787,13 @@ async function guardarEdicion(evento, id) {
                 fecha: fecha.value,
                 descripcion: descripcion.value,
                 mes_cuenta: mesCuenta.value,
+                tipo: tipo.value,
             },
         });
+        const nombre = nombreTipoFrase(tipo.value);
         avisar(mesCuenta.value === estado.mes
-            ? "Transferencia actualizada"
-            : `Transferencia actualizada y movida a ${nombreMes(mesCuenta.value).toLowerCase()}`);
+            ? `${nombre} actualizada`
+            : `${nombre} actualizada y movida a ${nombreMes(mesCuenta.value).toLowerCase()}`);
         await cambiarMes(mesCuenta.value);
         devolverFoco(id, "editar");
     } catch (e) {
@@ -794,6 +824,7 @@ async function agregarTransferencia(evento) {
     }
 
     const mesCuenta = $("mes-cuenta").value;
+    const tipo = tipoNuevo();
     const restaurar = ocupar($("btn-agregar"), "Guardando…");
     try {
         const { id } = await api("/transferencias", {
@@ -804,11 +835,14 @@ async function agregarTransferencia(evento) {
                 descripcion: $("descripcion").value,
                 persona: estado.persona,
                 mes_cuenta: mesCuenta,
+                tipo,
             },
         });
-        avisar(`Transferencia añadida a ${nombreMes(mesCuenta).toLowerCase()}`);
+        avisar(`${nombreTipoFrase(tipo)} añadida a ${nombreMes(mesCuenta).toLowerCase()}`);
         monto.value = "";
         $("descripcion").value = "";
+        // Lo habitual es apuntar transferencias recibidas: se vuelve a ese tipo.
+        $("tipo-ingreso").checked = true;
         // La próxima vuelve a contar por defecto para el mes de su fecha.
         pintarOpcionesMes($("mes-cuenta"), fecha.value);
         // En móvil se pliega el formulario para ver el historial.
@@ -825,6 +859,7 @@ async function agregarTransferencia(evento) {
         $("error-nueva").textContent = error.message;
     } finally {
         restaurar();
+        pintarTipoNuevo();   // después de restaurar(), que repone el texto anterior del botón
     }
 }
 
@@ -897,9 +932,23 @@ function pintarSelectorPersonas() {
     pintarTituloNueva();
 }
 
-// El formulario dice siempre a quién se le apunta la transferencia.
+// Tipo elegido en el formulario de alta: "ingreso" o "retirada".
+function tipoNuevo() {
+    return $("tipo-retirada").checked ? "retirada" : "ingreso";
+}
+
+// El formulario dice siempre a quién se le apunta y si es una transferencia
+// recibida o una retirada del pote.
 function pintarTituloNueva() {
-    $("titulo-nueva").textContent = `Nueva transferencia · ${estado.persona}`;
+    $("titulo-nueva").textContent = `Nueva ${nombreTipo(tipoNuevo())} · ${estado.persona}`;
+}
+
+// Al cambiar el tipo cambian el título, el botón y la etiqueta del mes.
+function pintarTipoNuevo() {
+    const retirada = tipoNuevo() === "retirada";
+    pintarTituloNueva();
+    $("btn-agregar").textContent = retirada ? "Añadir retirada" : "Añadir transferencia";
+    $("etiqueta-mes-cuenta").textContent = retirada ? "Del pote de" : "Para el pote de";
 }
 
 function elegirPersona(nombre) {
@@ -1107,6 +1156,9 @@ document.addEventListener("DOMContentLoaded", () => {
     $("btn-reintentar-resumen").addEventListener("click", recargar);
     $("plegable-nueva").open = !PANTALLA_ESTRECHA.matches;
     $("form-nueva").addEventListener("submit", agregarTransferencia);
+    for (const radio of document.querySelectorAll("#form-nueva input[name=tipo]")) {
+        radio.addEventListener("change", pintarTipoNuevo);
+    }
     $("fecha").addEventListener("change", () => {
         alCambiarFecha($("fecha"), $("mes-cuenta"));
         marcarMesesCompletos();
