@@ -8,9 +8,10 @@ from flask import (Blueprint, current_app, jsonify, render_template, request,
 
 import db
 from seguridad import limitador_login
-from logica import (Conflicto, DatosInvalidos, NoEncontrada, calcular_resumen,
-                    validar_descripcion, validar_fecha, validar_mes,
-                    validar_mes_cuenta, validar_monto, validar_nombre)
+from logica import (INGRESO, RETIRADA, Conflicto, DatosInvalidos, NoEncontrada,
+                    calcular_resumen, validar_descripcion, validar_fecha,
+                    validar_mes, validar_mes_cuenta, validar_monto,
+                    validar_nombre, validar_tipo)
 
 bp = Blueprint("rutas", __name__)
 
@@ -130,11 +131,13 @@ def crear_transferencia():
     fecha = validar_fecha(data.get("fecha"))
     descripcion = validar_descripcion(data.get("descripcion"))
     mes_cuenta = validar_mes_cuenta(data.get("mes_cuenta"), fecha)
+    tipo = validar_tipo(data.get("tipo"))
     persona = data.get("persona")
 
     with db.conexion() as conn:
         objetivo_de(conn, persona)
-        nuevo_id = db.insertar_transferencia(conn, monto, fecha, descripcion, persona, mes_cuenta)
+        nuevo_id = db.insertar_transferencia(conn, monto, fecha, descripcion, persona,
+                                             mes_cuenta, tipo)
 
     return jsonify({"mensaje": "Transferencia creada", "id": nuevo_id}), 201
 
@@ -147,6 +150,7 @@ def editar_transferencia(id):
     fecha = validar_fecha(data.get("fecha"))
     descripcion = validar_descripcion(data.get("descripcion"))
     mes_cuenta = validar_mes_cuenta(data.get("mes_cuenta"), fecha)
+    tipo = validar_tipo(data.get("tipo"))
 
     with db.conexion() as conn:
         transferencia = db.obtener_transferencia(conn, id)
@@ -154,7 +158,7 @@ def editar_transferencia(id):
             raise NoEncontrada("No existe")
         if transferencia["confirmada"]:
             raise Conflicto("No se puede editar una transferencia confirmada")
-        db.actualizar_transferencia(conn, id, monto, fecha, descripcion, mes_cuenta)
+        db.actualizar_transferencia(conn, id, monto, fecha, descripcion, mes_cuenta, tipo)
 
     return jsonify({"ok": True})
 
@@ -196,13 +200,19 @@ def obtener_resumen():
 
     with db.conexion() as conn:
         objetivo = objetivo_de(conn, persona)
-        confirmado, pendiente = db.sumar_por_estado(conn, persona, mes)
+        totales = db.sumar_por_estado(conn, persona, mes)
 
-    resumen = calcular_resumen(confirmado, pendiente, objetivo)
+    resumen = calcular_resumen(
+        recibido=totales[(INGRESO, True)],
+        pendiente=totales[(INGRESO, False)],
+        objetivo=objetivo,
+        retirado=totales[(RETIRADA, True)],
+        retirado_pendiente=totales[(RETIRADA, False)],
+    )
 
     respuesta = {
         clave: importe(resumen[clave])
-        for clave in ("total_confirmado", "pendiente", "objetivo", "restante",
+        for clave in ("total_confirmado", "pendiente", "retirado", "objetivo", "restante",
                       "restante_tras_pendiente")
     }
     respuesta.update({

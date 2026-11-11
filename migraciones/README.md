@@ -107,3 +107,41 @@ python -m migraciones.m002_mes_cuenta aplicar --url "postgresql://..."
 En SQLite (local) no hace falta nada si borras `database.db`; si quieres
 conservarla, ejecuta el mismo `ALTER TABLE ... ADD COLUMN` con cualquier
 cliente de SQLite.
+
+## 003 — Retiradas del pote (`m003_tipo.py`)
+
+**Qué hace:** añade a `transferencias` la columna `tipo` (`'ingreso'` o
+`'retirada'`, por defecto `'ingreso'`). Una retirada es dinero que se coge del
+pote: resta del mes en vez de sumar. El monto se sigue guardando positivo.
+**No cambia ningún dato existente**: todas las transferencias quedan como
+`ingreso` y los totales no cambian.
+
+**Hay que aplicarla antes de desplegar el código que la usa**: ese código
+lee la columna y fallaría si no existe.
+
+**Opción fácil — editor SQL de Neon:** en la consola de Neon, *SQL Editor*,
+pega y ejecuta:
+
+```sql
+ALTER TABLE transferencias
+ADD COLUMN tipo TEXT NOT NULL DEFAULT 'ingreso'
+CHECK (tipo IN ('ingreso', 'retirada'));
+```
+
+Para deshacerla (**cuidado**: las retiradas pasarían a sumar como
+transferencias normales; elimínalas antes):
+
+```sql
+ALTER TABLE transferencias DROP COLUMN tipo;
+```
+
+**Opción con el script:**
+
+```bash
+python -m migraciones.m003_tipo comprobar --url "postgresql://..."
+python -m migraciones.m003_tipo aplicar --url "postgresql://..."
+```
+
+En SQLite (local) no hace falta nada si borras `database.db`; si quieres
+conservarla, ejecuta el mismo `ALTER TABLE ... ADD COLUMN` con cualquier
+cliente de SQLite.

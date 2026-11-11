@@ -15,6 +15,13 @@ MONTO_MAXIMO = Decimal("1000000")
 MAX_DESCRIPCION = 200
 MAX_NOMBRE = 40
 
+# Tipos de movimiento: un "ingreso" (transferencia recibida) suma al pote del
+# mes y una "retirada" (dinero que se coge del pote) resta. El monto siempre
+# se guarda positivo; el signo lo da el tipo.
+INGRESO = "ingreso"
+RETIRADA = "retirada"
+TIPOS = (INGRESO, RETIRADA)
+
 
 # ------------------------
 # ERRORES DE NEGOCIO
@@ -74,6 +81,15 @@ def validar_fecha(valor):
         return datetime.strptime(str(valor), "%Y-%m-%d").strftime("%Y-%m-%d")
     except (TypeError, ValueError):
         raise DatosInvalidos("Fecha inválida (formato AAAA-MM-DD)")
+
+
+def validar_tipo(valor):
+    """Tipo de movimiento. Si no se indica, es un ingreso (como hasta ahora)."""
+    if valor in (None, ""):
+        return INGRESO
+    if valor not in TIPOS:
+        raise DatosInvalidos("Tipo inválido (ingreso o retirada)")
+    return valor
 
 
 def validar_mes(valor=None):
@@ -150,14 +166,25 @@ def validar_nombre(valor):
 # CÁLCULOS
 # ------------------------
 
-def calcular_resumen(confirmado, pendiente, objetivo):
+def calcular_resumen(recibido, pendiente, objetivo,
+                     retirado=Decimal("0.00"), retirado_pendiente=Decimal("0.00")):
     """Calcula el resumen del mes. Todos los importes en Decimal.
 
+    recibido y pendiente son los ingresos (confirmados y pendientes);
+    retirado y retirado_pendiente, las retiradas del pote. Lo que cuenta es
+    el neto: lo que hay en el pote es lo recibido menos lo retirado.
+
+    - total_confirmado: neto confirmado (puede ser negativo si se retira más
+      de lo recibido).
+    - pendiente: neto pendiente (ingresos pendientes menos retiradas pendientes).
+    - retirado: total de retiradas confirmadas.
     - restante: lo que falta por recibir (negativo si se superó el objetivo).
     - restante_tras_pendiente: lo que faltaría si se confirmara lo pendiente.
     - porcentaje: progreso confirmado respecto al objetivo (puede pasar de 100).
     - porcentaje_pendiente: lo que aportaría lo pendiente si se confirma.
     """
+    confirmado = recibido - retirado
+    pendiente = pendiente - retirado_pendiente
     restante = objetivo - confirmado
 
     if objetivo > 0:
@@ -170,6 +197,7 @@ def calcular_resumen(confirmado, pendiente, objetivo):
     return {
         "total_confirmado": confirmado,
         "pendiente": pendiente,
+        "retirado": retirado,
         "objetivo": objetivo,
         "restante": restante,
         "restante_tras_pendiente": restante - pendiente,

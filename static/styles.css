@@ -34,6 +34,9 @@
     --pendiente-fondo: #fdf1dc;
     --peligro: #c0262d;
     --peligro-fondo: #fde8e8;
+    /* Retiradas del pote: rojo, porque restan (mismo tono que --peligro) */
+    --retirada: #c0262d;
+    --retirada-fondo: #fde8e8;
     --pista-barra: #dfe3ea;
     --foco: #2f4bd8;
     --sombra: 0 1px 2px rgba(16, 24, 40, .06), 0 4px 12px rgba(16, 24, 40, .06);
@@ -87,6 +90,8 @@
         --pendiente-fondo: #3a2b12;
         --peligro: #ff8a80;
         --peligro-fondo: #3d1a1c;
+        --retirada: #ff8a80;
+        --retirada-fondo: #3d1a1c;
         --pista-barra: #2a3550;
         --foco: #a9b8ff;
         --sombra: none;
@@ -684,6 +689,10 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .cifra-confirmado dd { color: var(--confirmado); }
 .cifra-pendiente { background: var(--pendiente-fondo); }
 .cifra-pendiente dd { color: var(--pendiente); }
+.cifra-retirado { background: var(--retirada-fondo); }
+.cifra-retirado dd { color: var(--retirada); }
+/* Con la cifra "Retirado" son cuatro: dos filas de dos */
+.cifras.con-retirado { grid-template-columns: 1fr 1fr; }
 
 .punto { width: 10px; height: 10px; border-radius: 50%; flex: none; }
 
@@ -692,13 +701,13 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 @media (max-width: 480px) {
     .tarjeta { padding: 1rem; }
     .cifras { grid-template-columns: 1fr 1fr; }
-    .cifra-objetivo {
+    .cifras:not(.con-retirado) .cifra-objetivo {
         grid-column: 1 / -1;
         display: flex;
         justify-content: space-between;
         align-items: baseline;
     }
-    .cifra-objetivo dd { margin: 0; }
+    .cifras:not(.con-retirado) .cifra-objetivo dd { margin: 0; }
 }
 /* Los puntos son la leyenda de la barra: usan su mismo color de tramo
    (--color-progreso), relleno para lo confirmado y rayado para lo pendiente */
@@ -781,6 +790,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     font-size: var(--texto-lg);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
+    white-space: nowrap; /* "−50,00 €" siempre en una línea */
 }
 
 .estado {
@@ -817,6 +827,17 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     background: var(--superficie-2);
     background: color-mix(in srgb, var(--primario) 12%, transparent);
 }
+
+/* Retirada del pote: etiqueta e importe con su color */
+.etiqueta-retirada {
+    padding: .125rem .5rem;
+    border-radius: 999px;
+    font-size: var(--texto-xs);
+    font-weight: 700;
+    color: var(--retirada);
+    background: var(--retirada-fondo);
+}
+.movimiento-retirada .movimiento-monto { color: var(--retirada); }
 
 .movimiento-detalle {
     margin-top: .25rem;
