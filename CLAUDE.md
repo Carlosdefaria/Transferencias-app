@@ -55,3 +55,8 @@ Las consultas se escriben con `%s` y se ejecutan con `db.ejecutar(conn, query, p
 - No elimines funcionalidades sin consultarme; si falta información, pregunta.
 - No propongas reescribir desde cero; mejoras graduales y probadas.
 - Estilo profesional, directo y sin tecnicismos sin explicar.
+
+## Conectores MCP (`.mcp.json`)
+- Neon (base de datos PostgreSQL) y Render (despliegue), definidos en `.mcp.json`.
+- Render necesita la variable de entorno `RENDER_API_KEY` (nunca se guarda en el repo).
+- Neon se autoriza con OAuth desde `/mcp`.
