@@ -57,6 +57,18 @@ Las consultas se escriben con `%s` y se ejecutan con `db.ejecutar(conn, query, p
 - Estilo profesional, directo y sin tecnicismos sin explicar.
 
 ## Conectores MCP (`.mcp.json`)
-- Neon (base de datos PostgreSQL) y Render (despliegue), definidos en `.mcp.json`.
-- Render necesita la variable de entorno `RENDER_API_KEY` (nunca se guarda en el repo).
-- Neon se autoriza con OAuth desde `/mcp`.
+- `.mcp.json` define dos conectores de proyecto: Neon (base de datos PostgreSQL) y Render (despliegue).
+- Neon se autoriza con OAuth desde `/mcp`. Solo tiene acceso al proyecto `app-transferencias` (`holy-bird-16822427`), cuya única rama es `production`.
+- Render necesita la variable de entorno `RENDER_API_KEY`. Solo está en el ordenador local y nunca se guarda en el repo.
+- El servidor MCP de Render a veces falla de forma temporal (503 o timeout). Si pasa, reconectar desde `/mcp` más tarde antes de pensar que la clave está mal.
+
+### Tipos de sesión
+- **Sesión local ("This computer")**: para infraestructura. Logs y estado de los despliegues en Render; esquema y consultas en Neon.
+- **Sesión en la nube conectada al repo de GitHub**: para código, con ramas y pull requests. No tiene acceso a Render ni a Neon.
+
+### Reglas
+- En sesiones locales, los conectores se usan sobre todo para leer. Antes de cualquier cambio (variables de entorno, despliegues, migraciones, SQL que modifique datos), explicar qué se hará y esperar mi confirmación.
+- No cambiar código del proyecto en sesiones locales: mi carpeta puede ir por detrás de GitHub. El código se cambia en sesiones con el repo.
+- Nunca ejecutar SQL que modifique datos en `production` sin mi confirmación. Para pruebas, proponer una rama de desarrollo en Neon.
+- Nunca mostrar, copiar ni guardar claves ni credenciales.
+- Si una tarea de código necesita información de Render o Neon, decirme qué consultar; yo la paso desde una sesión local.
