@@ -777,6 +777,13 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     background: var(--confirmado-fondo);
     background: color-mix(in srgb, var(--confirmado-fondo) 55%, var(--superficie));
 }
+/* Una retirada confirmada resta del pote: rojo en vez de verde, para no
+   confundirla con un ingreso. La etiqueta "Confirmada" sigue en verde (es el estado). */
+.movimiento.confirmada.movimiento-retirada {
+    border-left-color: var(--retirada);
+    background: var(--retirada-fondo);
+    background: color-mix(in srgb, var(--retirada-fondo) 55%, var(--superficie));
+}
 .movimiento.editando { border-left-color: var(--primario); }
 
 .movimiento-cabecera {
