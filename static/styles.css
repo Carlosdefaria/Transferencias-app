@@ -764,45 +764,65 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     gap: .5rem;
 }
 
-.movimiento {
-    padding: .75rem 1rem;
-    border: 1px solid var(--borde);
-    border-left: 4px solid var(--pendiente-barra);
-    border-radius: var(--radio-pequeno);
-    background: var(--superficie);
-}
-.movimiento.confirmada {
-    border-left-color: var(--confirmado);
-    background: var(--confirmado-fondo);
-    background: color-mix(in srgb, var(--confirmado-fondo) 55%, var(--superficie));
-}
-/* Una retirada confirmada resta del pote: rojo en vez de verde, para no
-   confundirla con un ingreso. */
-.movimiento.confirmada.movimiento-retirada {
-    border-left-color: var(--retirada);
-    background: var(--retirada-fondo);
-    background: color-mix(in srgb, var(--retirada-fondo) 55%, var(--superficie));
-}
-.movimiento.editando { border-left-color: var(--primario); }
+/* Historial: lista continua, una fila por movimiento separada por una línea
+   fina (sin tarjeta propia). El estado lo marca un punto de color: verde
+   confirmada, naranja pendiente y rojo retirada confirmada. Las pendientes,
+   además, llevan la etiqueta "Pendiente", para no depender solo del color. */
+#lista-transferencias { gap: 0; }
 
-.movimiento-cabecera {
+.movimiento { padding: .75rem 0; }
+.movimiento + .movimiento { border-top: 1px solid var(--borde); }
+.movimiento:first-child { padding-top: .25rem; }
+
+.movimiento-fila {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    gap: .5rem;
+    align-items: baseline;
+    gap: .75rem;
 }
 
+.movimiento-titulo {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    min-width: 0; /* deja que una descripción larga se parta en vez de empujar el importe */
+}
+
+.movimiento-desc { font-weight: 600; overflow-wrap: anywhere; }
+
+.movimiento-punto {
+    flex: none;
+    width: .5rem;
+    height: .5rem;
+    border-radius: 50%;
+    background: var(--confirmado);
+}
+.movimiento-punto.pendiente,
+.movimiento:not(.confirmada) .movimiento-punto { background: var(--pendiente-barra); }
+.movimiento-punto.retirada,
+.movimiento.confirmada.movimiento-retirada .movimiento-punto { background: var(--retirada); }
+
 .movimiento-monto {
-    font-size: var(--texto-lg);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     white-space: nowrap; /* "−50,00 €" siempre en una línea */
 }
+.movimiento-retirada .movimiento-monto { color: var(--retirada); }
 
-/* Solo se muestra en las pendientes: una confirmada ya se reconoce por su fondo,
-   el botón "Marcar pendiente" y la pista de debajo */
+/* Fecha y estado, alineados con la descripción (punto .5rem + hueco .5rem) */
+.movimiento-detalle {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .25rem .5rem;
+    margin-top: .125rem;
+    padding-left: 1rem;
+    color: var(--texto-suave);
+    font-size: var(--texto-sm);
+}
+
+/* Solo se muestra en las pendientes (app.js la oculta en las confirmadas) */
 .estado {
-    flex: none;
     padding: .125rem .5rem;
     border-radius: 999px;
     font-size: var(--texto-xs);
@@ -811,41 +831,26 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     color: var(--pendiente);
 }
 
-.movimiento-etiquetas { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .25rem; }
-
-/* "Adelantada" / "Atrasada": cuenta para un mes distinto al de su fecha */
-.etiqueta-mes {
-    padding: .125rem .5rem;
-    border-radius: 999px;
-    font-size: var(--texto-xs);
-    font-weight: 700;
-    color: var(--primario);
-    background: var(--superficie-2);
-    background: color-mix(in srgb, var(--primario) 12%, transparent);
+/* Acciones como enlaces de texto (.enlace), más bajos que en el resto de la
+   app para que la lista sea compacta: 32 px de alto siguen siendo fáciles de tocar. */
+.movimiento-botones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 1rem;
+    padding-left: 1rem;
+    margin-top: .125rem;
 }
-
-/* Retirada del pote: etiqueta e importe con su color */
-.etiqueta-retirada {
-    padding: .125rem .5rem;
-    border-radius: 999px;
-    font-size: var(--texto-xs);
-    font-weight: 700;
-    color: var(--retirada);
-    background: var(--retirada-fondo);
+.movimiento-botones .enlace {
+    min-height: 2rem;
+    padding: 0;
+    text-decoration: none;
 }
-.movimiento-retirada .movimiento-monto { color: var(--retirada); }
+.enlace.exito { color: var(--confirmado); }
+.enlace.peligro { color: var(--peligro); }
+.enlace.suave { color: var(--texto-suave); }
+.enlace:disabled { opacity: .6; cursor: not-allowed; }
 
-.movimiento-detalle {
-    margin-top: .25rem;
-    color: var(--texto-suave);
-    font-size: var(--texto-sm);
-    overflow-wrap: anywhere;
-}
-.movimiento-fecha::after { content: " · "; }
-
-.movimiento-cuenta { margin-top: .25rem; }
-.movimiento-pista { margin-top: .5rem; }
-
+/* Botones de los formularios de edición y de la ventana "Personas" */
 .movimiento-acciones {
     display: flex;
     flex-wrap: wrap;
@@ -853,14 +858,40 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     margin-top: .75rem;
 }
 
+/* Leyenda de los puntos y ayuda, una sola vez encima de la lista */
+.leyenda-historial {
+    display: grid;
+    gap: .25rem;
+    margin-bottom: .75rem;
+}
+.leyenda-puntos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .25rem 1rem;
+    color: var(--texto-suave);
+    font-size: var(--texto-xs);
+}
+.leyenda-puntos > span { display: inline-flex; align-items: center; gap: .375rem; }
+
+/* La fila que se edita se recuadra para separar el formulario del resto */
+.movimiento.editando {
+    margin-block: .25rem;
+    padding: .75rem;
+    border: 1px solid var(--primario);
+    border-radius: var(--radio-pequeno);
+}
+.movimiento.editando + .movimiento { border-top: 0; }
+
 /* Destaca un momento la transferencia recién añadida */
 .movimiento.recien { animation: resaltar 2s ease-out; }
-@keyframes resaltar { from { box-shadow: 0 0 0 3px var(--primario); } to { box-shadow: 0 0 0 3px transparent; } }
+@keyframes resaltar { from { background: color-mix(in srgb, var(--primario) 18%, transparent); } }
 
 /* Filas de carga (esqueleto) */
 .movimiento.esqueleto {
-    height: 104px;
-    border-left-color: var(--borde);
+    height: 3.5rem;
+    margin-block: .25rem;
+    border: 0;
+    border-radius: var(--radio-pequeno);
     background: linear-gradient(90deg, var(--superficie-2) 25%, var(--superficie) 50%, var(--superficie-2) 75%);
     background-size: 200% 100%;
     animation: brillo 1.2s ease-in-out infinite;

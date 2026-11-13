@@ -576,6 +576,7 @@ async function cargarTransferencias(version, silenciosa) {
         if (version !== estado.version) return;
         lista.replaceChildren();
         $("contador").textContent = "";
+        $("leyenda-historial").hidden = true;
         mostrarEstadoLista("error", `No se pudo cargar el historial: ${error.message}`, recargar);
     } finally {
         if (version === estado.version) lista.setAttribute("aria-busy", "false");
@@ -590,6 +591,7 @@ function pintarTransferencias(datos) {
 
     const n = transferencias.length;
     $("contador").textContent = n === 1 ? "1 transferencia" : `${n} transferencias`;
+    $("leyenda-historial").hidden = n === 0;
     if (n === 0) {
         mostrarEstadoLista("vacio", `No hay transferencias en ${nombreMes(datos.mes).toLowerCase()}.`,
             abrirFormularioNueva, "Añadir transferencia");
@@ -610,20 +612,7 @@ function crearElemento(t) {
     const retirada = t.tipo === "retirada";
     elemento.classList.toggle("movimiento-retirada", retirada);
     elemento.querySelector(".etiqueta-retirada").hidden = !retirada;
-
-    // Etiqueta si cuenta para un mes distinto al de su fecha
-    const desplazamiento = mesesEntre(t.fecha.slice(0, 7), t.mes_cuenta);
-    if (desplazamiento !== 0) {
-        const etiquetaMes = elemento.querySelector(".etiqueta-mes");
-        etiquetaMes.hidden = false;
-        etiquetaMes.textContent = desplazamiento > 0 ? "Adelantada" : "Atrasada";
-        // En texto visible: un "title" no se ve en el móvil ni con teclado.
-        const cuenta = elemento.querySelector(".movimiento-cuenta");
-        cuenta.hidden = false;
-        cuenta.textContent = `${retirada ? "Hecha" : "Recibida"} en ` +
-            `${nombreMes(t.fecha.slice(0, 7)).toLowerCase()} · ` +
-            `${retirada ? "resta de" : "cuenta para"} ${nombreMes(t.mes_cuenta).toLowerCase()}`;
-    }
+    // Una adelantada no lleva etiqueta: su fecha (de otro mes) ya lo indica.
 
     // Las retiradas restan del pote: se muestran con un "−" delante.
     elemento.querySelector(".movimiento-monto").textContent =
@@ -639,11 +628,11 @@ function crearElemento(t) {
     const descripcion = t.descripcion || formatearFechaNumerica(t.fecha);
     const confirmar = elemento.querySelector("[data-accion=confirmar]");
     confirmar.textContent = t.confirmada ? "Marcar pendiente" : "Confirmar";
-    confirmar.classList.add(t.confirmada ? "secundario" : "exito");
+    confirmar.classList.add(t.confirmada ? "suave" : "exito");
     confirmar.setAttribute("aria-label", `${confirmar.textContent}: ${descripcion}`);
 
-    // Las confirmadas no se pueden editar ni eliminar (el servidor también lo impide).
-    elemento.querySelector(".movimiento-pista").hidden = !t.confirmada;
+    // Las confirmadas no se pueden editar ni eliminar (el servidor también lo
+    // impide). La ayuda que lo explica sale una vez, encima de la lista.
     for (const accion of ["editar", "eliminar"]) {
         const boton = elemento.querySelector(`[data-accion=${accion}]`);
         if (t.confirmada) boton.remove();
