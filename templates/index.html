@@ -240,6 +240,15 @@
                         <h2 id="titulo-historial" tabindex="-1">Historial del mes</h2>
                         <span id="contador" class="contador"></span>
                     </div>
+                    <!-- Leyenda y ayuda: una sola vez para toda la lista (app.js la oculta si está vacía) -->
+                    <div id="leyenda-historial" class="leyenda-historial" hidden>
+                        <p class="leyenda-puntos" aria-hidden="true">
+                            <span><span class="movimiento-punto"></span>Confirmada</span>
+                            <span><span class="movimiento-punto pendiente"></span>Pendiente</span>
+                            <span><span class="movimiento-punto retirada"></span>Retirada</span>
+                        </p>
+                        <p class="ayuda">Para editar o eliminar una confirmada, márcala antes como pendiente.</p>
+                    </div>
                     <div id="estado-lista" class="estado-lista" aria-live="polite"></div>
                     <ul id="lista-transferencias" class="lista" aria-busy="true"></ul>
                 </section>
@@ -267,25 +276,25 @@
 <!-- Plantilla de una transferencia del historial (la rellena app.js) -->
 <template id="plantilla-transferencia">
     <li class="movimiento">
-        <div class="movimiento-cabecera">
-            <span class="movimiento-monto"></span>
-            <span class="movimiento-etiquetas">
-                <span class="etiqueta-retirada" hidden>Retirada</span>
-                <span class="etiqueta-mes" hidden></span>
-                <span class="estado">Pendiente</span>
+        <div class="movimiento-fila">
+            <span class="movimiento-titulo">
+                <!-- El punto solo es visual: el estado también se dice con texto -->
+                <span class="movimiento-punto" aria-hidden="true"></span>
+                <span class="movimiento-desc"></span>
             </span>
+            <span class="movimiento-monto"></span>
         </div>
         <p class="movimiento-detalle">
             <time class="movimiento-fecha"></time>
-            <span class="movimiento-desc"></span>
+            <span class="estado">Pendiente</span>
+            <!-- Para lectores de pantalla; a la vista ya lo dicen el "−" y el rojo -->
+            <span class="sr-only etiqueta-retirada" hidden>Retirada del pote</span>
         </p>
-        <p class="ayuda movimiento-cuenta" hidden></p>
-        <div class="movimiento-acciones">
-            <button type="button" class="boton pequeno" data-accion="confirmar"></button>
-            <button type="button" class="boton pequeno secundario" data-accion="editar">Editar</button>
-            <button type="button" class="boton pequeno peligro" data-accion="eliminar">Eliminar</button>
+        <div class="movimiento-botones">
+            <button type="button" class="enlace" data-accion="confirmar"></button>
+            <button type="button" class="enlace" data-accion="editar">Editar</button>
+            <button type="button" class="enlace peligro" data-accion="eliminar">Eliminar</button>
         </div>
-        <p class="ayuda movimiento-pista" hidden>Para editarla o eliminarla, márcala antes como pendiente.</p>
     </li>
 </template>
 
