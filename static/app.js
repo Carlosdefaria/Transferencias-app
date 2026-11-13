@@ -628,8 +628,8 @@ function crearElemento(t) {
     // Las retiradas restan del pote: se muestran con un "−" delante.
     elemento.querySelector(".movimiento-monto").textContent =
         (retirada ? "−" : "") + formatearDinero(t.monto);
-    const etiqueta = elemento.querySelector(".estado");
-    etiqueta.textContent = t.confirmada ? "Confirmada" : "Pendiente";
+    // Solo se etiquetan las pendientes (lo que falta por confirmar).
+    elemento.querySelector(".estado").hidden = t.confirmada;
 
     const fecha = elemento.querySelector(".movimiento-fecha");
     fecha.dateTime = t.fecha;

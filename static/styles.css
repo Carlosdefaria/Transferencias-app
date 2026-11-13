@@ -63,7 +63,6 @@
     --ico-derecha: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 6l6 6-6 6'/%3E%3C/svg%3E");
     --ico-abajo: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
     --ico-cerrar: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 6l12 12M18 6L6 18'/%3E%3C/svg%3E");
-    --ico-check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5 9-10'/%3E%3C/svg%3E");
 }
 
 @media (prefers-color-scheme: dark) {
@@ -778,7 +777,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     background: color-mix(in srgb, var(--confirmado-fondo) 55%, var(--superficie));
 }
 /* Una retirada confirmada resta del pote: rojo en vez de verde, para no
-   confundirla con un ingreso. La etiqueta "Confirmada" sigue en verde (es el estado). */
+   confundirla con un ingreso. */
 .movimiento.confirmada.movimiento-retirada {
     border-left-color: var(--retirada);
     background: var(--retirada-fondo);
@@ -800,10 +799,9 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     white-space: nowrap; /* "−50,00 €" siempre en una línea */
 }
 
+/* Solo se muestra en las pendientes: una confirmada ya se reconoce por su fondo,
+   el botón "Marcar pendiente" y la pista de debajo */
 .estado {
-    display: inline-flex;
-    align-items: center;
-    gap: .25rem;
     flex: none;
     padding: .125rem .5rem;
     border-radius: 999px;
@@ -811,15 +809,6 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     font-weight: 700;
     background: var(--pendiente-fondo);
     color: var(--pendiente);
-}
-.confirmada .estado { background: var(--confirmado-fondo); color: var(--confirmado); }
-.confirmada .estado::before {
-    content: "";
-    width: 1em;
-    height: 1em;
-    background: currentColor;
-    -webkit-mask: var(--ico-check) center / contain no-repeat;
-    mask: var(--ico-check) center / contain no-repeat;
 }
 
 .movimiento-etiquetas { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .25rem; }
