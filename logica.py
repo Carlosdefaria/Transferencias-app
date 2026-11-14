@@ -22,6 +22,15 @@ INGRESO = "ingreso"
 RETIRADA = "retirada"
 TIPOS = (INGRESO, RETIRADA)
 
+# Partidas del desglose de gastos de cada persona: clave -> nombre para los
+# errores. Las partidas son fijas (solo se editan sus importes) y cada clave
+# tiene su columna gasto_<clave> en la tabla config. El objetivo mensual de
+# la persona es siempre la suma de sus importes.
+GASTOS = {
+    "universidad": "Universidad",
+    "alquiler": "Alquiler y manutención",
+}
+
 
 # ------------------------
 # ERRORES DE NEGOCIO
@@ -55,8 +64,12 @@ def a_decimal(valor):
     return Decimal(str(valor)).quantize(CENTIMOS, rounding=ROUND_HALF_UP)
 
 
-def validar_monto(valor, campo="Monto"):
-    """Devuelve el importe como Decimal positivo con como mucho 2 decimales."""
+def validar_monto(valor, campo="Monto", permitir_cero=False):
+    """Devuelve el importe como Decimal positivo con como mucho 2 decimales.
+
+    Con permitir_cero=True también acepta 0 (una partida del desglose que no
+    se usa).
+    """
     if valor is None or isinstance(valor, bool):
         raise DatosInvalidos(f"{campo} obligatorio")
 
@@ -65,8 +78,10 @@ def validar_monto(valor, campo="Monto"):
     except InvalidOperation:
         raise DatosInvalidos(f"{campo} inválido")
 
-    if not monto.is_finite() or monto <= 0:
-        raise DatosInvalidos(f"{campo} debe ser mayor que 0")
+    if not monto.is_finite():
+        raise DatosInvalidos(f"{campo} inválido")
+    if monto < 0 or (monto == 0 and not permitir_cero):
+        raise DatosInvalidos(f"{campo} debe ser mayor {'o igual ' if permitir_cero else ''}que 0")
     if monto > MONTO_MAXIMO:
         raise DatosInvalidos(f"{campo} demasiado grande")
     if monto != monto.quantize(CENTIMOS):
@@ -160,6 +175,23 @@ def validar_nombre(valor):
     if len(nombre) > MAX_NOMBRE:
         raise DatosInvalidos(f"Nombre demasiado largo (máximo {MAX_NOMBRE} caracteres)")
     return nombre
+
+
+def validar_desglose(valor):
+    """Importes del desglose de gastos y su total, que será el objetivo.
+
+    Recibe un dict con un importe por cada clave de GASTOS. Cada importe puede
+    ser 0, pero el total tiene que ser mayor que 0 (un objetivo de 0 no tiene
+    sentido). Devuelve ({clave: Decimal}, total).
+    """
+    if not isinstance(valor, dict):
+        raise DatosInvalidos("Desglose obligatorio")
+    desglose = {clave: validar_monto(valor.get(clave), campo=nombre, permitir_cero=True)
+                for clave, nombre in GASTOS.items()}
+    total = sum(desglose.values())
+    if total <= 0:
+        raise DatosInvalidos("El total del desglose debe ser mayor que 0")
+    return desglose, total
 
 
 # ------------------------

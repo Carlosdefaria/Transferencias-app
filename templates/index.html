@@ -54,7 +54,7 @@
     <div id="bienvenida-tarjeta" class="tarjeta bienvenida-tarjeta">
         <div class="logo" aria-hidden="true">€</div>
         <h1>Añade la primera persona</h1>
-        <p class="texto-suave">Escribe su nombre y su objetivo mensual. Después podrás añadir más desde Ajustes.</p>
+        <p class="texto-suave">Escribe su nombre y sus gastos: el total será su objetivo mensual. Después podrás añadir más personas desde Ajustes.</p>
     </div>
 </main>
 
@@ -89,18 +89,27 @@
         <!-- Los avisos van aquí dentro mientras la ventana está abierta; si no, quedarían detrás -->
         <div class="avisos" role="status" aria-live="polite"></div>
 
-        <!-- El objetivo es de la persona elegida: app.js pone su nombre en el título -->
-        <section class="seccion-ajustes" aria-labelledby="titulo-objetivo">
-            <h3 id="titulo-objetivo" class="subtitulo">Objetivo mensual</h3>
-            <form id="form-objetivo" class="formulario" novalidate>
-                <div class="campo">
-                    <label for="nuevo-objetivo" class="etiqueta">Nuevo objetivo (€)</label>
-                    <input id="nuevo-objetivo" type="text" inputmode="decimal" autocomplete="off"
-                           required aria-describedby="ayuda-objetivo error-objetivo">
-                    <p id="ayuda-objetivo" class="ayuda">Se aplica a todos los meses, también a los anteriores.</p>
-                    <p id="error-objetivo" class="error-campo"></p>
+        <!-- El desglose es de la persona elegida: app.js pone su nombre en el título y
+             rellena sus importes. El objetivo mensual es su total: no se edita aparte. -->
+        <section class="seccion-ajustes" aria-labelledby="titulo-desglose">
+            <h3 id="titulo-desglose" class="subtitulo">Desglose de gastos</h3>
+            <form id="form-desglose" class="formulario" novalidate>
+                <div class="campos-linea">
+                    <div class="campo">
+                        <label for="gasto-universidad" class="etiqueta">Universidad (€)</label>
+                        <input id="gasto-universidad" data-gasto="universidad" type="text" inputmode="decimal"
+                               autocomplete="off" required aria-describedby="ayuda-desglose error-desglose">
+                    </div>
+                    <div class="campo">
+                        <label for="gasto-alquiler" class="etiqueta">Alquiler y manutención (€)</label>
+                        <input id="gasto-alquiler" data-gasto="alquiler" type="text" inputmode="decimal"
+                               autocomplete="off" required aria-describedby="ayuda-desglose error-desglose">
+                    </div>
                 </div>
-                <button type="submit" class="boton secundario">Guardar objetivo</button>
+                <p id="ayuda-desglose" class="ayuda">Objetivo mensual: <strong class="total-desglose">–</strong>.
+                    Es el total del desglose y se aplica a todos los meses, también a los anteriores.</p>
+                <p id="error-desglose" class="error-campo"></p>
+                <button type="submit" class="boton secundario">Guardar desglose</button>
             </form>
         </section>
 
@@ -110,18 +119,26 @@
 
         <form id="form-persona" class="formulario" novalidate>
             <h4 class="subtitulo">Añadir persona</h4>
+            <div class="campo">
+                <label for="nombre-persona" class="etiqueta">Nombre</label>
+                <input id="nombre-persona" type="text" maxlength="40" required autocomplete="off"
+                       aria-describedby="error-persona">
+            </div>
+            <!-- Mismas partidas que el desglose de Ajustes: su total será el objetivo -->
             <div class="campos-linea">
                 <div class="campo">
-                    <label for="nombre-persona" class="etiqueta">Nombre</label>
-                    <input id="nombre-persona" type="text" maxlength="40" required autocomplete="off"
-                           aria-describedby="error-persona">
+                    <label for="persona-universidad" class="etiqueta">Universidad (€)</label>
+                    <input id="persona-universidad" data-gasto="universidad" type="text" inputmode="decimal"
+                           autocomplete="off" required aria-describedby="ayuda-persona error-persona">
                 </div>
                 <div class="campo">
-                    <label for="objetivo-persona" class="etiqueta">Objetivo mensual (€)</label>
-                    <input id="objetivo-persona" type="text" inputmode="decimal" autocomplete="off"
-                           required aria-describedby="error-persona">
+                    <label for="persona-alquiler" class="etiqueta">Alquiler y manutención (€)</label>
+                    <input id="persona-alquiler" data-gasto="alquiler" type="text" inputmode="decimal"
+                           autocomplete="off" required aria-describedby="ayuda-persona error-persona">
                 </div>
             </div>
+            <p id="ayuda-persona" class="ayuda">Objetivo mensual: <strong class="total-desglose">–</strong>
+                (el total del desglose). Pon 0 en un gasto que no tenga.</p>
             <p id="error-persona" class="error-campo"></p>
             <button id="btn-persona" type="submit" class="boton secundario ancho">Añadir persona</button>
         </form>
@@ -298,22 +315,26 @@
                     <ul id="lista-transferencias" class="lista" aria-busy="true"></ul>
                 </section>
 
-                <!-- DESGLOSE DE GASTOS: leyenda fija con los gastos que cubre el dinero -->
+                <!-- DESGLOSE DE GASTOS de la persona elegida: lo pinta app.js
+                     (pintarDesglose()) y se edita en Ajustes. Su total es el objetivo. -->
                 <section class="tarjeta" aria-labelledby="titulo-gastos">
-                    <!-- Plegado: es información fija que se consulta poco -->
+                    <!-- Plegado: se consulta poco -->
                     <details class="plegable">
                     <summary><h2 id="titulo-gastos">Desglose de gastos</h2></summary>
-                    <dl class="cifras cifras-gastos">
-                        <div class="cifra">
-                            <dt><span aria-hidden="true">🎓</span> Universidad</dt>
-                            <dd>2829,00 €</dd>
-                        </div>
-                        <div class="cifra">
-                            <dt><span aria-hidden="true">🏠</span> Alquiler y manutención</dt>
-                            <dd>1200,00 €</dd>
-                        </div>
-                    </dl>
-                    <p class="texto-suave gastos-total">Total: <strong>4029,00 €</strong></p>
+                    <div id="con-desglose" class="desglose-datos">
+                        <dl class="cifras cifras-gastos">
+                            <div class="cifra">
+                                <dt><span aria-hidden="true">🎓</span> Universidad</dt>
+                                <dd data-gasto="universidad">–</dd>
+                            </div>
+                            <div class="cifra">
+                                <dt><span aria-hidden="true">🏠</span> Alquiler y manutención</dt>
+                                <dd data-gasto="alquiler">–</dd>
+                            </div>
+                        </dl>
+                        <p class="texto-suave gastos-total">Total (objetivo mensual): <strong id="total-gastos">–</strong></p>
+                    </div>
+                    <p id="sin-desglose" class="texto-suave gastos-total" hidden>Sin desglose todavía. Rellénalo en Ajustes: su total será el objetivo mensual.</p>
                     </details>
                 </section>
             </div>

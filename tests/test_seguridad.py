@@ -3,7 +3,7 @@
 import pytest
 
 from app import crear_app
-from conftest import PIN
+from conftest import DESGLOSE_TEST, PIN
 from seguridad import LimitadorIntentos
 
 
@@ -104,11 +104,11 @@ def test_respuestas_json_no_se_guardan_en_cache(sesion):
 
 
 def test_peticion_desde_otra_web_se_rechaza(sesion):
-    respuesta = sesion.post("/objetivo", json={"persona": "Marta", "objetivo": "1"},
+    respuesta = sesion.post("/desglose", json={"persona": "Marta", "desglose": DESGLOSE_TEST},
                             headers={"Origin": "https://web-maliciosa.example"})
     assert respuesta.status_code == 403
     # Desde la propia web sí funciona
-    respuesta = sesion.post("/objetivo", json={"persona": "Marta", "objetivo": "1"},
+    respuesta = sesion.post("/desglose", json={"persona": "Marta", "desglose": DESGLOSE_TEST},
                             headers={"Origin": "http://localhost"})
     assert respuesta.status_code == 200
 

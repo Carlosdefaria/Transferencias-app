@@ -33,7 +33,7 @@ def test_logout(sesion):
     ("delete", "/transferencias/1"),
     ("patch", "/transferencias/1/confirmar"),
     ("get", "/resumen?persona=Marta"),
-    ("post", "/objetivo"),
+    ("post", "/desglose"),
 ])
 def test_rutas_protegidas(cliente, metodo, url):
     assert getattr(cliente, metodo)(url).status_code == 401
@@ -172,14 +172,27 @@ def test_resumen_suma_centimos_sin_errores(sesion):
     assert r["total_confirmado"] == "0.30"
 
 
-def test_objetivo(sesion):
-    assert sesion.post("/objetivo", json={"persona": "Juan", "objetivo": "800"}).status_code == 200
-    assert sesion.get("/resumen?persona=Juan&mes=2026-10").get_json()["objetivo"] == "800.00"
+def guardar_desglose(sesion, persona, universidad, alquiler):
+    return sesion.post("/desglose", json={
+        "persona": persona, "desglose": {"universidad": universidad, "alquiler": alquiler}})
+
+
+def test_desglose_cambia_el_objetivo(sesion):
+    respuesta = guardar_desglose(sesion, "Juan", "300", "500,50")
+    assert respuesta.status_code == 200
+    assert respuesta.get_json()["objetivo"] == "800.50"
+    # El objetivo del resumen es el total del desglose
+    assert sesion.get("/resumen?persona=Juan&mes=2026-10").get_json()["objetivo"] == "800.50"
+    juan = next(p for p in sesion.get("/personas").get_json() if p["nombre"] == "Juan")
+    assert juan["desglose"] == {"universidad": "300.00", "alquiler": "500.50"}
     # El de Marta no cambia
     assert sesion.get("/resumen?persona=Marta&mes=2026-10").get_json()["objetivo"] == "1070.00"
 
-    assert sesion.post("/objetivo", json={"persona": "Juan", "objetivo": "0"}).status_code == 400
-    assert sesion.post("/objetivo", json={"persona": "Nadie", "objetivo": "5"}).status_code == 400
+    assert guardar_desglose(sesion, "Juan", "0", "0").status_code == 400
+    assert guardar_desglose(sesion, "Juan", "abc", "5").status_code == 400
+    assert guardar_desglose(sesion, "Nadie", "5", "5").status_code == 400
+    # Una partida a 0 sí vale
+    assert guardar_desglose(sesion, "Juan", "0", "900").get_json()["objetivo"] == "900.00"
 
 
 def test_errores_http_son_json(sesion):

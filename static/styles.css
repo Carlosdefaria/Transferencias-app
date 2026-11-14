@@ -765,7 +765,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 }
 .plegable[open] summary::after { transform: rotate(180deg); }
 .plegable[open] > .formulario,
-.plegable[open] > .cifras-gastos { margin-top: .75rem; }
+.plegable[open] > .desglose-datos > .cifras-gastos { margin-top: .75rem; }
 
 
 /* ---------- Historial ---------- */

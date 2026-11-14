@@ -13,13 +13,18 @@ from decimal import Decimal
 
 import psycopg
 
-from logica import INGRESO, TIPOS, a_decimal, rango_mes
+from logica import GASTOS, INGRESO, TIPOS, a_decimal, rango_mes
 
 log = logging.getLogger(__name__)
 
 # sqlite3 no sabe guardar Decimal: se lo pasamos como texto y SQLite lo
 # convierte a número porque la columna es numérica.
 sqlite3.register_adapter(Decimal, str)
+
+# Columnas del desglose de gastos en config, una por partida de GASTOS
+# (gasto_universidad, gasto_alquiler). Salen de una constante del código,
+# nunca de lo que envía el usuario, así que se pueden poner en el SQL.
+COLUMNAS_GASTO = [f"gasto_{clave}" for clave in GASTOS]
 
 
 def conectar():
@@ -98,6 +103,7 @@ def crear_tablas():
                 id {id_columna},
                 persona TEXT NOT NULL,
                 objetivo_total NUMERIC(12,2),
+                {" ".join(f"{columna} NUMERIC(12,2)," for columna in COLUMNAS_GASTO)}
                 CONSTRAINT config_persona_unica UNIQUE (persona)
             )
         """)
@@ -156,41 +162,59 @@ def obtener_objetivo(conn, persona):
     return a_decimal(fila[0] or 0)
 
 
-def guardar_objetivo(conn, persona, objetivo):
-    ejecutar(conn, "UPDATE config SET objetivo_total = %s WHERE persona = %s",
-             (objetivo, persona))
+# El objetivo se guarda junto al desglose porque siempre es su suma: se
+# cambian a la vez y el resumen sigue leyendo solo objetivo_total.
+_SET_DESGLOSE = ", ".join(f"{columna} = %s" for columna in COLUMNAS_GASTO)
+
+
+def _importes(desglose):
+    """Importes del desglose en el mismo orden que COLUMNAS_GASTO."""
+    return [desglose[clave] for clave in GASTOS]
+
+
+def guardar_desglose(conn, persona, desglose, objetivo):
+    ejecutar(conn,
+             f"UPDATE config SET {_SET_DESGLOSE}, objetivo_total = %s WHERE persona = %s",
+             (*_importes(desglose), objetivo, persona))
 
 
 # Las transferencias guardan el nombre de la persona (no su id), así que
 # para saber cuántas tiene cada una se cruzan las tablas por el nombre.
-_SELECT_PERSONAS = """
-    SELECT c.id, c.persona, c.objetivo_total, COUNT(t.id)
+_COLUMNAS_PERSONA = ", ".join(
+    ["c.id", "c.persona", "c.objetivo_total"] + [f"c.{columna}" for columna in COLUMNAS_GASTO])
+_SELECT_PERSONAS = f"""
+    SELECT {_COLUMNAS_PERSONA}, COUNT(t.id)
     FROM config c
     LEFT JOIN transferencias t ON t.persona = c.persona
 """
 
 
 def _fila_a_persona(fila):
+    gastos = fila[3:-1]   # una columna por partida, en el orden de GASTOS
     return {
         "id": fila[0],
         "nombre": fila[1],
         "objetivo": a_decimal(fila[2] or 0),
-        "transferencias": fila[3],
+        # None si la persona aún no tiene desglose (personas de antes de la
+        # migración 004): conserva su objetivo hasta que se rellene.
+        "desglose": None if all(v is None for v in gastos)
+                    else {clave: a_decimal(v or 0) for clave, v in zip(GASTOS, gastos)},
+        "transferencias": fila[-1],
     }
 
 
 def listar_personas(conn):
-    filas = ejecutar(conn, _SELECT_PERSONAS + """
-        GROUP BY c.id, c.persona, c.objetivo_total
+    filas = ejecutar(conn, _SELECT_PERSONAS + f"""
+        GROUP BY {_COLUMNAS_PERSONA}
         ORDER BY c.id
     """).fetchall()
     return [_fila_a_persona(fila) for fila in filas]
 
 
 def obtener_persona(conn, id):
-    fila = ejecutar(conn, _SELECT_PERSONAS + """
+    fila = ejecutar(conn, _SELECT_PERSONAS + f"""
         WHERE c.id = %s
-        GROUP BY c.id, c.persona, c.objetivo_total
+        GROUP BY {_COLUMNAS_PERSONA}
     """, (id,)).fetchone()
     return _fila_a_persona(fila) if fila else None
 
@@ -207,10 +231,13 @@ def contar_personas(conn):
     return ejecutar(conn, "SELECT COUNT(*) FROM config").fetchone()[0]
 
 
-def insertar_persona(conn, nombre, objetivo):
+def insertar_persona(conn, nombre, desglose, objetivo):
+    columnas = ", ".join(COLUMNAS_GASTO)
+    huecos = ", ".join(["%s"] * len(COLUMNAS_GASTO))
     return ejecutar(conn,
-                    "INSERT INTO config (persona, objetivo_total) VALUES (%s, %s) RETURNING id",
-                    (nombre, objetivo)).fetchone()[0]
+                    f"INSERT INTO config (persona, objetivo_total, {columnas}) "
+                    f"VALUES (%s, %s, {huecos}) RETURNING id",
+                    (nombre, objetivo, *_importes(desglose))).fetchone()[0]
 
 
 def renombrar_persona(conn, id, nombre_actual, nombre_nuevo):

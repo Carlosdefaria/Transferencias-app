@@ -58,7 +58,7 @@ def cliente(app):
 
 # La app no crea personas al empezar: los tests usan estas, creadas en 'sesion'.
 PERSONAS_TEST = ("Marta", "Juan")
-OBJETIVO_TEST = "1070"
+DESGLOSE_TEST = {"universidad": "570", "alquiler": "500"}   # objetivo: 1070
 
 
 @pytest.fixture
@@ -73,7 +73,7 @@ def sesion_vacia(cliente):
 def sesion(sesion_vacia):
     """Cliente HTTP con la sesión iniciada y las personas de PERSONAS_TEST."""
     for nombre in PERSONAS_TEST:
-        respuesta = sesion_vacia.post("/personas", json={"nombre": nombre, "objetivo": OBJETIVO_TEST})
+        respuesta = sesion_vacia.post("/personas", json={"nombre": nombre, "desglose": DESGLOSE_TEST})
         assert respuesta.status_code == 201, respuesta.get_json()
     return sesion_vacia
 

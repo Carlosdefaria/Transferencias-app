@@ -11,7 +11,7 @@ import psycopg
 import pytest
 
 from conftest import crear
-from migraciones import m001_numeric, m002_mes_cuenta, m003_tipo
+from migraciones import m001_numeric, m002_mes_cuenta, m003_tipo, m004_desglose
 
 pytestmark = pytest.mark.skipif(not os.environ.get("TEST_DATABASE_URL"),
                                 reason="Necesita TEST_DATABASE_URL (PostgreSQL)")
@@ -82,7 +82,11 @@ def test_la_app_funciona_antes_y_despues_de_migrar(conn_antigua, sesion):
         conn_antigua.execute(sql)
     m002_mes_cuenta.aplicar(conn_antigua)
     m003_tipo.aplicar(conn_antigua)
+    m004_desglose.aplicar(conn_antigua)
     conn_antigua.commit()
+    # Las personas de antes de la 004 conservan su objetivo y no tienen desglose
+    marta = next(p for p in sesion.get("/personas").get_json() if p["nombre"] == "Marta")
+    assert (marta["objetivo"], marta["desglose"]) == ("1070.00", None)
 
     def resumen():
         return sesion.get("/resumen?persona=Marta&mes=2026-10").get_json()

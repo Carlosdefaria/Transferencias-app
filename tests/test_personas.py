@@ -2,7 +2,7 @@
 
 import pytest
 
-from conftest import crear
+from conftest import DESGLOSE_TEST, crear
 from logica import DatosInvalidos, validar_nombre
 
 
@@ -37,6 +37,7 @@ def test_listar_personas(sesion):
     lista = personas(sesion)
     assert [p["nombre"] for p in lista] == ["Marta", "Juan"]
     assert lista[0]["objetivo"] == "1070.00"
+    assert lista[0]["desglose"] == {"universidad": "570.00", "alquiler": "500.00"}
     assert lista[0]["transferencias"] == 0
 
 
@@ -47,7 +48,7 @@ def test_cuenta_las_transferencias(sesion):
 
 
 def test_anadir_persona(sesion):
-    respuesta = sesion.post("/personas", json={"nombre": " Ana ", "objetivo": "800"})
+    respuesta = sesion.post("/personas", json={"nombre": " Ana ", "desglose": {"universidad": "0", "alquiler": "800"}})
     assert respuesta.status_code == 201
     assert respuesta.get_json()["nombre"] == "Ana"
 
@@ -59,18 +60,23 @@ def test_anadir_persona(sesion):
     assert resumen["pendiente"] == "50.00"
 
 
-def test_anadir_sin_objetivo_da_error(sesion):
-    # No hay objetivo por defecto: hay que indicarlo siempre.
-    for sin_objetivo in ({"nombre": "Ana"}, {"nombre": "Ana", "objetivo": ""}):
-        assert sesion.post("/personas", json=sin_objetivo).status_code == 400
+@pytest.mark.parametrize("datos", [
+    {"nombre": "Ana"},                                                 # sin desglose
+    {"nombre": "Ana", "objetivo": "800"},                              # el objetivo no se envía
+    {"nombre": "Ana", "desglose": {"universidad": "800"}},             # falta una partida
+    {"nombre": "Ana", "desglose": {"universidad": "0", "alquiler": "0"}},   # total 0
+    {"nombre": "Ana", "desglose": {"universidad": "-5", "alquiler": "10"}},
+])
+def test_anadir_sin_desglose_valido_da_error(sesion, datos):
+    # No hay objetivo por defecto: sale del desglose, que es obligatorio.
+    assert sesion.post("/personas", json=datos).status_code == 400
     assert "Ana" not in [p["nombre"] for p in personas(sesion)]
 
 
 def test_no_se_repiten_nombres(sesion):
-    respuesta = sesion.post("/personas", json={"nombre": "marta", "objetivo": "800"})
+    respuesta = sesion.post("/personas", json={"nombre": "marta", "desglose": DESGLOSE_TEST})
     assert respuesta.status_code == 409
     assert sesion.post("/personas", json={"nombre": ""}).status_code == 400
-    assert sesion.post("/personas", json={"nombre": "Ana", "objetivo": "-5"}).status_code == 400
 
 
 # ------------------------
