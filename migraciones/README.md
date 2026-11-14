@@ -145,3 +145,41 @@ python -m migraciones.m003_tipo aplicar --url "postgresql://..."
 En SQLite (local) no hace falta nada si borras `database.db`; si quieres
 conservarla, ejecuta el mismo `ALTER TABLE ... ADD COLUMN` con cualquier
 cliente de SQLite.
+
+## 004 — Desglose de gastos por persona (`m004_desglose.py`)
+
+**Qué hace:** añade a `config` las columnas `gasto_universidad` y
+`gasto_alquiler` (`NUMERIC(12,2)`, opcionales). Desde ahora el objetivo de
+cada persona es la suma de su desglose. **No cambia ningún dato existente**:
+las personas que ya existen quedan con las columnas vacías, conservan su
+objetivo y la app muestra "Sin desglose" hasta que lo rellenes en Ajustes.
+Al guardarlo, su objetivo pasa a ser la suma (también en los meses pasados).
+
+**Hay que aplicarla antes de desplegar el código que la usa**: ese código
+lee las columnas y fallaría si no existen.
+
+**Opción fácil — editor SQL de Neon:** en la consola de Neon, *SQL Editor*,
+pega y ejecuta:
+
+```sql
+ALTER TABLE config
+ADD COLUMN gasto_universidad NUMERIC(12,2),
+ADD COLUMN gasto_alquiler NUMERIC(12,2);
+```
+
+Para deshacerla (se pierde el desglose; el objetivo se conserva):
+
+```sql
+ALTER TABLE config DROP COLUMN gasto_universidad, DROP COLUMN gasto_alquiler;
+```
+
+**Opción con el script:**
+
+```bash
+python -m migraciones.m004_desglose comprobar --url "postgresql://..."
+python -m migraciones.m004_desglose aplicar --url "postgresql://..."
+```
+
+En SQLite (local) no hace falta nada si borras `database.db`; si quieres
+conservarla, ejecuta los `ALTER TABLE ... ADD COLUMN` (uno por columna:
+SQLite no admite varios en la misma sentencia) con cualquier cliente de SQLite.

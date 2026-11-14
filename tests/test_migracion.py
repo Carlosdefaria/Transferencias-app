@@ -11,7 +11,7 @@ import psycopg
 import pytest
 
 from conftest import crear
-from migraciones import m001_numeric, m002_mes_cuenta, m003_tipo
+from migraciones import m001_numeric, m002_mes_cuenta, m003_tipo, m004_desglose
 
 pytestmark = pytest.mark.skipif(not os.environ.get("TEST_DATABASE_URL"),
                                 reason="Necesita TEST_DATABASE_URL (PostgreSQL)")
@@ -24,10 +24,10 @@ ESQUEMA_ANTIGUO = [
         descripcion TEXT, persona TEXT NOT NULL, confirmada BOOLEAN DEFAULT FALSE)""",
     """CREATE TABLE config (
         id SERIAL PRIMARY KEY, persona TEXT NOT NULL, objetivo_total FLOAT)""",
-    "INSERT INTO config (persona, objetivo_total) VALUES ('Carlos', 1070), ('Pito', 1070)",
+    "INSERT INTO config (persona, objetivo_total) VALUES ('Marta', 1070), ('Juan', 1070)",
     """INSERT INTO transferencias (monto, fecha, persona, confirmada) VALUES
-        (0.1, '2026-10-01', 'Carlos', TRUE), (0.2, '2026-10-02', 'Carlos', TRUE),
-        (535.555, '2026-10-03', 'Pito', FALSE)""",
+        (0.1, '2026-10-01', 'Marta', TRUE), (0.2, '2026-10-02', 'Marta', TRUE),
+        (535.555, '2026-10-03', 'Juan', FALSE)""",
 ]
 
 
@@ -60,13 +60,13 @@ def test_aplicar_y_revertir(conn_antigua):
 
 
 def test_no_se_aplica_con_personas_repetidas(conn_antigua):
-    conn_antigua.execute("INSERT INTO config (persona, objetivo_total) VALUES ('Pito', 900)")
+    conn_antigua.execute("INSERT INTO config (persona, objetivo_total) VALUES ('Juan', 900)")
     problemas = m001_numeric.comprobar(conn_antigua)
     assert any("repetidas" in p for p in problemas)
 
 
 def test_si_falla_no_cambia_nada(conn_antigua):
-    conn_antigua.execute("INSERT INTO config (persona, objetivo_total) VALUES ('Pito', 900)")
+    conn_antigua.execute("INSERT INTO config (persona, objetivo_total) VALUES ('Juan', 900)")
     conn_antigua.commit()
     with pytest.raises(psycopg.errors.UniqueViolation):
         m001_numeric.aplicar(conn_antigua)
@@ -82,10 +82,14 @@ def test_la_app_funciona_antes_y_despues_de_migrar(conn_antigua, sesion):
         conn_antigua.execute(sql)
     m002_mes_cuenta.aplicar(conn_antigua)
     m003_tipo.aplicar(conn_antigua)
+    m004_desglose.aplicar(conn_antigua)
     conn_antigua.commit()
+    # Las personas de antes de la 004 conservan su objetivo y no tienen desglose
+    marta = next(p for p in sesion.get("/personas").get_json() if p["nombre"] == "Marta")
+    assert (marta["objetivo"], marta["desglose"]) == ("1070.00", None)
 
     def resumen():
-        return sesion.get("/resumen?persona=Carlos&mes=2026-10").get_json()
+        return sesion.get("/resumen?persona=Marta&mes=2026-10").get_json()
 
     assert resumen()["total_confirmado"] == "0.30"
     crear(sesion, monto="10.05", fecha="2026-10-04")

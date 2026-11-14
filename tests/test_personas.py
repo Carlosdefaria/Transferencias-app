@@ -2,7 +2,7 @@
 
 import pytest
 
-from conftest import crear
+from conftest import DESGLOSE_TEST, crear
 from logica import DatosInvalidos, validar_nombre
 
 
@@ -29,25 +29,30 @@ def test_validar_nombre():
 # LISTAR Y AÑADIR
 # ------------------------
 
-def test_listar_personas_iniciales(sesion):
+def test_bd_nueva_empieza_sin_personas(sesion_vacia):
+    assert personas(sesion_vacia) == []
+
+
+def test_listar_personas(sesion):
     lista = personas(sesion)
-    assert [p["nombre"] for p in lista] == ["Carlos", "Pito"]
+    assert [p["nombre"] for p in lista] == ["Marta", "Juan"]
     assert lista[0]["objetivo"] == "1070.00"
+    assert lista[0]["desglose"] == {"universidad": "570.00", "alquiler": "500.00"}
     assert lista[0]["transferencias"] == 0
 
 
 def test_cuenta_las_transferencias(sesion):
-    crear(sesion, persona="Carlos")
-    crear(sesion, persona="Carlos")
+    crear(sesion, persona="Marta")
+    crear(sesion, persona="Marta")
     assert personas(sesion)[0]["transferencias"] == 2
 
 
 def test_anadir_persona(sesion):
-    respuesta = sesion.post("/personas", json={"nombre": " Ana ", "objetivo": "800"})
+    respuesta = sesion.post("/personas", json={"nombre": " Ana ", "desglose": {"universidad": "0", "alquiler": "800"}})
     assert respuesta.status_code == 201
     assert respuesta.get_json()["nombre"] == "Ana"
 
-    assert [p["nombre"] for p in personas(sesion)] == ["Carlos", "Pito", "Ana"]
+    assert [p["nombre"] for p in personas(sesion)] == ["Marta", "Juan", "Ana"]
     # La nueva persona funciona en el resto de la app
     crear(sesion, persona="Ana", monto="50")
     resumen = sesion.get("/resumen?persona=Ana&mes=2026-10").get_json()
@@ -55,16 +60,23 @@ def test_anadir_persona(sesion):
     assert resumen["pendiente"] == "50.00"
 
 
-def test_anadir_sin_objetivo_usa_el_de_por_defecto(sesion):
-    respuesta = sesion.post("/personas", json={"nombre": "Ana"})
-    assert respuesta.get_json()["objetivo"] == "1070.00"
+@pytest.mark.parametrize("datos", [
+    {"nombre": "Ana"},                                                 # sin desglose
+    {"nombre": "Ana", "objetivo": "800"},                              # el objetivo no se envía
+    {"nombre": "Ana", "desglose": {"universidad": "800"}},             # falta una partida
+    {"nombre": "Ana", "desglose": {"universidad": "0", "alquiler": "0"}},   # total 0
+    {"nombre": "Ana", "desglose": {"universidad": "-5", "alquiler": "10"}},
+])
+def test_anadir_sin_desglose_valido_da_error(sesion, datos):
+    # No hay objetivo por defecto: sale del desglose, que es obligatorio.
+    assert sesion.post("/personas", json=datos).status_code == 400
+    assert "Ana" not in [p["nombre"] for p in personas(sesion)]
 
 
 def test_no_se_repiten_nombres(sesion):
-    respuesta = sesion.post("/personas", json={"nombre": "carlos"})
+    respuesta = sesion.post("/personas", json={"nombre": "marta", "desglose": DESGLOSE_TEST})
     assert respuesta.status_code == 409
     assert sesion.post("/personas", json={"nombre": ""}).status_code == 400
-    assert sesion.post("/personas", json={"nombre": "Ana", "objetivo": "-5"}).status_code == 400
 
 
 # ------------------------
@@ -72,23 +84,23 @@ def test_no_se_repiten_nombres(sesion):
 # ------------------------
 
 def test_renombrar_mueve_sus_transferencias(sesion):
-    crear(sesion, persona="Pito", monto="25")
-    respuesta = sesion.put(f"/personas/{id_de(sesion, 'Pito')}", json={"nombre": "Pedro"})
+    crear(sesion, persona="Juan", monto="25")
+    respuesta = sesion.put(f"/personas/{id_de(sesion, 'Juan')}", json={"nombre": "Pedro"})
     assert respuesta.status_code == 200
     assert respuesta.get_json()["nombre"] == "Pedro"
 
     lista = sesion.get("/transferencias?persona=Pedro&mes=2026-10").get_json()
     assert [t["monto"] for t in lista["transferencias"]] == ["25.00"]
-    assert sesion.get("/resumen?persona=Pito").status_code == 400  # el nombre viejo ya no existe
+    assert sesion.get("/resumen?persona=Juan").status_code == 400  # el nombre viejo ya no existe
 
 
 def test_renombrar_validaciones(sesion):
-    pito = id_de(sesion, "Pito")
-    assert sesion.put(f"/personas/{pito}", json={"nombre": "CARLOS"}).status_code == 409
-    assert sesion.put(f"/personas/{pito}", json={"nombre": "  "}).status_code == 400
+    juan = id_de(sesion, "Juan")
+    assert sesion.put(f"/personas/{juan}", json={"nombre": "MARTA"}).status_code == 409
+    assert sesion.put(f"/personas/{juan}", json={"nombre": "  "}).status_code == 400
     assert sesion.put("/personas/9999", json={"nombre": "Ana"}).status_code == 404
     # Cambiar solo mayúsculas del propio nombre sí se permite
-    assert sesion.put(f"/personas/{pito}", json={"nombre": "PITO"}).status_code == 200
+    assert sesion.put(f"/personas/{juan}", json={"nombre": "JUAN"}).status_code == 200
 
 
 # ------------------------
@@ -96,22 +108,22 @@ def test_renombrar_validaciones(sesion):
 # ------------------------
 
 def test_eliminar_persona_sin_transferencias(sesion):
-    assert sesion.delete(f"/personas/{id_de(sesion, 'Pito')}").status_code == 200
-    assert [p["nombre"] for p in personas(sesion)] == ["Carlos"]
-    assert sesion.get("/resumen?persona=Pito").status_code == 400
+    assert sesion.delete(f"/personas/{id_de(sesion, 'Juan')}").status_code == 200
+    assert [p["nombre"] for p in personas(sesion)] == ["Marta"]
+    assert sesion.get("/resumen?persona=Juan").status_code == 400
 
 
 def test_no_se_elimina_quien_tiene_transferencias(sesion):
-    crear(sesion, persona="Pito")
-    respuesta = sesion.delete(f"/personas/{id_de(sesion, 'Pito')}")
+    crear(sesion, persona="Juan")
+    respuesta = sesion.delete(f"/personas/{id_de(sesion, 'Juan')}")
     assert respuesta.status_code == 409
     assert "transferencias" in respuesta.get_json()["error"]
     assert len(personas(sesion)) == 2
 
 
 def test_no_se_elimina_la_ultima_persona(sesion):
-    sesion.delete(f"/personas/{id_de(sesion, 'Pito')}")
-    respuesta = sesion.delete(f"/personas/{id_de(sesion, 'Carlos')}")
+    sesion.delete(f"/personas/{id_de(sesion, 'Juan')}")
+    respuesta = sesion.delete(f"/personas/{id_de(sesion, 'Marta')}")
     assert respuesta.status_code == 409
     assert sesion.delete("/personas/9999").status_code == 404
 

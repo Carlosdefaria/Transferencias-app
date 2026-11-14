@@ -6,7 +6,7 @@ import pytest
 
 from logica import (DatosInvalidos, calcular_resumen, rango_mes,
                     validar_descripcion, validar_fecha, validar_mes,
-                    validar_monto)
+                    validar_desglose, validar_monto)
 
 
 # ------------------------
@@ -88,3 +88,26 @@ def test_decimal_no_pierde_centimos():
     # Con float, 0.1 + 0.2 = 0.30000000000000004
     total = validar_monto("0.1") + validar_monto("0.2")
     assert total == Decimal("0.30")
+
+
+# ------------------------
+# DESGLOSE DE GASTOS
+# ------------------------
+
+def test_validar_desglose_devuelve_importes_y_total():
+    desglose, total = validar_desglose({"universidad": "2829", "alquiler": "1200,50"})
+    assert desglose == {"universidad": Decimal("2829.00"), "alquiler": Decimal("1200.50")}
+    assert total == Decimal("4029.50")
+
+
+def test_validar_desglose_admite_una_partida_a_cero():
+    assert validar_desglose({"universidad": "0", "alquiler": "800"})[1] == Decimal("800.00")
+
+
+@pytest.mark.parametrize("valor", [
+    None, "800", {}, {"universidad": "800"}, {"universidad": "0", "alquiler": "0"},
+    {"universidad": "-1", "alquiler": "800"}, {"universidad": "1.005", "alquiler": "1"},
+])
+def test_validar_desglose_incorrecto(valor):
+    with pytest.raises(DatosInvalidos):
+        validar_desglose(valor)

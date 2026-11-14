@@ -27,13 +27,13 @@ def test_logout(sesion):
 
 
 @pytest.mark.parametrize("metodo, url", [
-    ("get", "/transferencias?persona=Carlos"),
+    ("get", "/transferencias?persona=Marta"),
     ("post", "/transferencias"),
     ("put", "/transferencias/1"),
     ("delete", "/transferencias/1"),
     ("patch", "/transferencias/1/confirmar"),
-    ("get", "/resumen?persona=Carlos"),
-    ("post", "/objetivo"),
+    ("get", "/resumen?persona=Marta"),
+    ("post", "/desglose"),
 ])
 def test_rutas_protegidas(cliente, metodo, url):
     assert getattr(cliente, metodo)(url).status_code == 401
@@ -45,7 +45,7 @@ def test_rutas_protegidas(cliente, metodo, url):
 
 def test_crear_y_listar(sesion):
     crear(sesion, monto="150.5", fecha="2026-10-05", descripcion="alquiler")
-    datos = sesion.get("/transferencias?persona=Carlos&mes=2026-10").get_json()
+    datos = sesion.get("/transferencias?persona=Marta&mes=2026-10").get_json()
 
     assert datos["mes"] == "2026-10"
     [t] = datos["transferencias"]
@@ -61,8 +61,8 @@ def test_lista_y_resumen_usan_el_mismo_mes(sesion):
     crear(sesion, monto="300", fecha="2026-10-31")
     crear(sesion, monto="400", fecha="2026-11-01")
 
-    lista = sesion.get("/transferencias?persona=Carlos&mes=2026-10").get_json()
-    resumen = sesion.get("/resumen?persona=Carlos&mes=2026-10").get_json()
+    lista = sesion.get("/transferencias?persona=Marta&mes=2026-10").get_json()
+    resumen = sesion.get("/resumen?persona=Marta&mes=2026-10").get_json()
 
     assert [t["monto"] for t in lista["transferencias"]] == ["300.00", "200.00"]
     assert resumen["pendiente"] == "500.00"
@@ -74,20 +74,20 @@ def test_sin_mes_se_usa_el_mes_actual(sesion):
     crear(sesion, fecha=hoy)
     crear(sesion, fecha="2001-01-01")
 
-    lista = sesion.get("/transferencias?persona=Carlos").get_json()
+    lista = sesion.get("/transferencias?persona=Marta").get_json()
     assert [t["fecha"] for t in lista["transferencias"]] == [hoy]
 
 
 def test_personas_separadas(sesion):
-    crear(sesion, persona="Carlos")
-    crear(sesion, persona="Pito", monto="7")
-    lista = sesion.get("/transferencias?persona=Pito&mes=2026-10").get_json()
+    crear(sesion, persona="Marta")
+    crear(sesion, persona="Juan", monto="7")
+    lista = sesion.get("/transferencias?persona=Juan&mes=2026-10").get_json()
     assert [t["monto"] for t in lista["transferencias"]] == ["7.00"]
 
 
 @pytest.mark.parametrize("cuerpo, mensaje", [
-    ({"monto": "-1", "fecha": "2026-10-01", "persona": "Carlos"}, "Monto"),
-    ({"monto": "10", "fecha": "01/10/2026", "persona": "Carlos"}, "Fecha"),
+    ({"monto": "-1", "fecha": "2026-10-01", "persona": "Marta"}, "Monto"),
+    ({"monto": "10", "fecha": "01/10/2026", "persona": "Marta"}, "Fecha"),
     ({"monto": "10", "fecha": "2026-10-01"}, "persona"),
     ({"monto": "10", "fecha": "2026-10-01", "persona": "Nadie"}, "Persona"),
 ])
@@ -98,7 +98,7 @@ def test_crear_valida_los_datos(sesion, cuerpo, mensaje):
 
 
 def test_parametros_invalidos(sesion):
-    assert sesion.get("/transferencias?persona=Carlos&mes=octubre").status_code == 400
+    assert sesion.get("/transferencias?persona=Marta&mes=octubre").status_code == 400
     assert sesion.get("/resumen").status_code == 400
 
 
@@ -112,7 +112,7 @@ def test_editar(sesion):
         "monto": "99.90", "fecha": "2026-10-20", "descripcion": "nuevo"})
     assert respuesta.status_code == 200
 
-    [t] = sesion.get("/transferencias?persona=Carlos&mes=2026-10").get_json()["transferencias"]
+    [t] = sesion.get("/transferencias?persona=Marta&mes=2026-10").get_json()["transferencias"]
     assert (t["monto"], t["fecha"], t["descripcion"]) == ("99.90", "2026-10-20", "nuevo")
 
 
@@ -155,7 +155,7 @@ def test_resumen_totales(sesion):
     crear(sesion, monto="200")
     sesion.patch(f"/transferencias/{a}/confirmar")
 
-    r = sesion.get("/resumen?persona=Carlos&mes=2026-10").get_json()
+    r = sesion.get("/resumen?persona=Marta&mes=2026-10").get_json()
     assert r["total_confirmado"] == "500.00"
     assert r["pendiente"] == "200.00"
     assert r["objetivo"] == "1070.00"
@@ -168,18 +168,31 @@ def test_resumen_suma_centimos_sin_errores(sesion):
     for _ in range(3):
         id = crear(sesion, monto="0.1")
         sesion.patch(f"/transferencias/{id}/confirmar")
-    r = sesion.get("/resumen?persona=Carlos&mes=2026-10").get_json()
+    r = sesion.get("/resumen?persona=Marta&mes=2026-10").get_json()
     assert r["total_confirmado"] == "0.30"
 
 
-def test_objetivo(sesion):
-    assert sesion.post("/objetivo", json={"persona": "Pito", "objetivo": "800"}).status_code == 200
-    assert sesion.get("/resumen?persona=Pito&mes=2026-10").get_json()["objetivo"] == "800.00"
-    # El de Carlos no cambia
-    assert sesion.get("/resumen?persona=Carlos&mes=2026-10").get_json()["objetivo"] == "1070.00"
+def guardar_desglose(sesion, persona, universidad, alquiler):
+    return sesion.post("/desglose", json={
+        "persona": persona, "desglose": {"universidad": universidad, "alquiler": alquiler}})
 
-    assert sesion.post("/objetivo", json={"persona": "Pito", "objetivo": "0"}).status_code == 400
-    assert sesion.post("/objetivo", json={"persona": "Nadie", "objetivo": "5"}).status_code == 400
+
+def test_desglose_cambia_el_objetivo(sesion):
+    respuesta = guardar_desglose(sesion, "Juan", "300", "500,50")
+    assert respuesta.status_code == 200
+    assert respuesta.get_json()["objetivo"] == "800.50"
+    # El objetivo del resumen es el total del desglose
+    assert sesion.get("/resumen?persona=Juan&mes=2026-10").get_json()["objetivo"] == "800.50"
+    juan = next(p for p in sesion.get("/personas").get_json() if p["nombre"] == "Juan")
+    assert juan["desglose"] == {"universidad": "300.00", "alquiler": "500.50"}
+    # El de Marta no cambia
+    assert sesion.get("/resumen?persona=Marta&mes=2026-10").get_json()["objetivo"] == "1070.00"
+
+    assert guardar_desglose(sesion, "Juan", "0", "0").status_code == 400
+    assert guardar_desglose(sesion, "Juan", "abc", "5").status_code == 400
+    assert guardar_desglose(sesion, "Nadie", "5", "5").status_code == 400
+    # Una partida a 0 sí vale
+    assert guardar_desglose(sesion, "Juan", "0", "900").get_json()["objetivo"] == "900.00"
 
 
 def test_errores_http_son_json(sesion):

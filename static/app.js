@@ -117,11 +117,13 @@ function formatearPorcentaje(valor) {
 
 // Convierte lo escrito en un importe para la API: acepta "1070,50", "1070.50" y
 // "1.070,50" y devuelve "1070.50". Devuelve null si no es válido o no es mayor
-// que 0. "1.070" sin coma no se acepta: no se sabe si son 1070 € o 1,07 €.
-function leerImporte(texto) {
+// que 0 (con permitirCero, 0 también vale: un gasto del desglose que no se tiene).
+// "1.070" sin coma no se acepta: no se sabe si son 1070 € o 1,07 €.
+function leerImporte(texto, { permitirCero = false } = {}) {
     let limpio = texto.replace(/[\s€]/g, "");
     if (limpio.includes(",")) limpio = limpio.replace(/\./g, "").replace(",", ".");
-    return /^\d+(\.\d{1,2})?$/.test(limpio) && Number(limpio) > 0 ? limpio : null;
+    const minimoOk = permitirCero ? Number(limpio) >= 0 : Number(limpio) > 0;
+    return /^\d+(\.\d{1,2})?$/.test(limpio) && minimoOk ? limpio : null;
 }
 
 function guardarPreferencia(clave, valor) {
@@ -224,7 +226,7 @@ function consulta(ruta, parametros) {
 // -----------------------------------------------------
 
 function mostrarVista(id) {
-    for (const vista of ["vista-carga", "vista-login", "vista-app"]) {
+    for (const vista of ["vista-carga", "vista-login", "vista-bienvenida", "vista-app"]) {
         $(vista).hidden = vista !== id;
     }
 }
@@ -248,12 +250,27 @@ async function mostrarApp() {
         mostrarEstadoLista("error", `No se pudieron cargar las personas: ${error.message}`, mostrarApp);
         return;
     }
+    // Con la BD vacía no hay personas: antes de nada se pide la primera.
+    if (!estado.personas.length) {
+        mostrarBienvenida();
+        return;
+    }
+    $("lista-personas").after($("form-persona"));   // vuelve a Ajustes si estaba en la bienvenida
     // Se abre en el mes que se está llenando, no siempre en el del calendario.
     estado.mesPote = await calcularMesPote();
     estado.mes = estado.mesPote;
     pintarMes();
     proponerFecha();
     recargar();
+}
+
+// Pantalla de la primera persona: usa el mismo formulario de "Ajustes"
+// (se mueve el nodo, como en colocarFormularioNueva()). Al añadirla,
+// agregarPersona() vuelve a llamar a mostrarApp().
+function mostrarBienvenida() {
+    $("bienvenida-tarjeta").append($("form-persona"));
+    mostrarVista("vista-bienvenida");
+    $("nombre-persona").focus();
 }
 
 async function iniciar() {
@@ -364,7 +381,6 @@ function pintarResumenConError(mensaje) {
     $("texto-progreso").textContent = "–";
 
     for (const id of ["confirmado", "pendiente", "objetivo", "retirado"]) $(id).textContent = "–";
-    $("nuevo-objetivo").placeholder = "";
 }
 
 function pintarResumen(datos) {
@@ -420,8 +436,6 @@ function pintarResumen(datos) {
     $("retirado").textContent = formatearDinero(datos.retirado);
     $("cifra-retirado").hidden = !hayRetiradas;
     $("cifra-retirado").parentElement.classList.toggle("con-retirado", hayRetiradas);
-    // Con el formato del resto de la app ("1070,00 €"), no el de la API ("1070.00")
-    $("nuevo-objetivo").placeholder = `Actual: ${formatearDinero(datos.objetivo)}`;
 
     if (estado.anunciar) {
         estado.anunciar = false;
@@ -796,7 +810,7 @@ async function guardarEdicion(evento, id) {
 
     const importe = leerImporte(monto.value);
     if (!importe) {
-        return mostrarErrorCampo(monto, error.id, "Introduce un importe mayor que 0, como 1070,50");
+        return mostrarErrorCampo(monto, error.id, "Introduce un importe mayor que 0, como 250,50");
     }
     if (!fecha.value) {
         return mostrarErrorCampo(fecha, error.id, "Elige una fecha");
@@ -841,7 +855,7 @@ async function agregarTransferencia(evento) {
 
     const importe = leerImporte(monto.value);
     if (!importe) {
-        return mostrarErrorCampo(monto, "error-monto", "Introduce un importe mayor que 0, como 1070,50");
+        return mostrarErrorCampo(monto, "error-monto", "Introduce un importe mayor que 0, como 250,50");
     }
     if (!fecha.value) {
         $("mas-opciones").open = true;   // la fecha está dentro de "Más opciones"
@@ -890,27 +904,95 @@ async function agregarTransferencia(evento) {
     }
 }
 
-async function guardarObjetivo(evento) {
-    evento.preventDefault();
-    const input = $("nuevo-objetivo");
-    limpiarErrorCampo(input, "error-objetivo");
+// -----------------------------------------------------
+// DESGLOSE DE GASTOS
+// -----------------------------------------------------
+// Cada persona tiene un importe por partida (campos con data-gasto) y su
+// objetivo mensual es el total. Lo usan el formulario de Ajustes
+// (#form-desglose) y el de añadir persona (#form-persona).
 
-    const objetivo = leerImporte(input.value);
-    if (!objetivo) {
-        return mostrarErrorCampo(input, "error-objetivo", "Introduce un objetivo mayor que 0, como 1070,50");
+function personaElegida() {
+    return estado.personas.find((p) => p.nombre === estado.persona);
+}
+
+// Suma en céntimos para no arrastrar errores de float (0,1 + 0,2). Solo es
+// para mostrarla: el total que vale es el que calcula el servidor.
+function totalDesglose(importes) {
+    return importes.reduce((suma, valor) => suma + Math.round(Number(valor) * 100), 0) / 100;
+}
+
+// Lee los importes de un formulario. Devuelve { desglose } si son válidos o
+// { campo, error } para mostrar el error en ese campo.
+function leerDesglose(form) {
+    const campos = [...form.querySelectorAll("input[data-gasto]")];
+    const desglose = {};
+    for (const campo of campos) {
+        const valor = leerImporte(campo.value, { permitirCero: true });
+        if (valor === null) {
+            return { campo, error: "Introduce cada gasto, como 250,50 (pon 0 si no lo tiene)" };
+        }
+        desglose[campo.dataset.gasto] = valor;
+    }
+    if (totalDesglose(Object.values(desglose)) <= 0) {
+        return { campo: campos[0], error: "El total del desglose tiene que ser mayor que 0" };
+    }
+    return { desglose };
+}
+
+// Mientras se escribe, el formulario muestra el objetivo que saldrá.
+function pintarTotalFormulario(form) {
+    const valores = [...form.querySelectorAll("input[data-gasto]")]
+        .map((campo) => leerImporte(campo.value, { permitirCero: true }));
+    form.querySelector(".total-desglose").textContent =
+        valores.includes(null) ? "–" : formatearDinero(totalDesglose(valores));
+}
+
+function limpiarErroresDesglose(form, idError) {
+    for (const campo of form.querySelectorAll("input")) limpiarErrorCampo(campo, idError);
+}
+
+// La tarjeta "Desglose de gastos" y el formulario de Ajustes, con los
+// importes de la persona elegida.
+function pintarDesglose() {
+    const desglose = personaElegida()?.desglose;
+    $("titulo-gastos").textContent = `Desglose de gastos · ${estado.persona}`;
+    $("con-desglose").hidden = !desglose;
+    $("sin-desglose").hidden = Boolean(desglose);
+    if (desglose) {
+        for (const dd of document.querySelectorAll("#con-desglose [data-gasto]")) {
+            dd.textContent = formatearDinero(desglose[dd.dataset.gasto]);
+        }
+        $("total-gastos").textContent = formatearDinero(totalDesglose(Object.values(desglose)));
     }
 
-    const restaurar = ocupar(evento.submitter || evento.target.querySelector("button"), "Guardando…");
+    const form = $("form-desglose");
+    limpiarErroresDesglose(form, "error-desglose");
+    for (const campo of form.querySelectorAll("input[data-gasto]")) {
+        // En los campos, con coma como se escribe en español ("1200,50")
+        campo.value = desglose ? desglose[campo.dataset.gasto].replace(".", ",") : "";
+    }
+    pintarTotalFormulario(form);
+}
+
+async function guardarDesglose(evento) {
+    evento.preventDefault();
+    const form = evento.target;
+    limpiarErroresDesglose(form, "error-desglose");
+
+    const { desglose, campo, error } = leerDesglose(form);
+    if (error) return mostrarErrorCampo(campo, "error-desglose", error);
+
+    const restaurar = ocupar(evento.submitter || form.querySelector("button"), "Guardando…");
     try {
-        await api("/objetivo", {
+        const respuesta = await api("/desglose", {
             metodo: "POST",
-            datos: { objetivo, persona: estado.persona },
+            datos: { desglose, persona: estado.persona },
         });
-        avisar("Objetivo actualizado");
-        input.value = "";
-        recargar({ silenciosa: true });
+        avisar(`Desglose guardado · objetivo ${formatearDinero(respuesta.objetivo)}`);
+        await cargarPersonas();          // trae el desglose nuevo y lo repinta
+        recargar({ silenciosa: true });  // el resumen usa el objetivo nuevo
     } catch (error) {
-        mostrarErrorCampo(input, "error-objetivo", error.message);
+        mostrarErrorCampo(form.querySelector("input"), "error-desglose", error.message);
     } finally {
         restaurar();
     }
@@ -970,10 +1052,11 @@ function pintarTituloNueva() {
 }
 
 // Textos que nombran a la persona elegida: el formulario de alta y el
-// objetivo de "Ajustes" (que se guarda para esa persona).
+// desglose (tarjeta y "Ajustes", que se guarda para esa persona).
 function pintarNombrePersona() {
     pintarTituloNueva();
-    $("titulo-objetivo").textContent = `Objetivo mensual de ${estado.persona}`;
+    $("titulo-desglose").textContent = `Desglose de gastos de ${estado.persona}`;
+    pintarDesglose();
 }
 
 // Al cambiar el tipo cambian el título, el botón y la etiqueta del mes.
@@ -1130,29 +1213,32 @@ async function eliminarPersona(fila, boton) {
 
 async function agregarPersona(evento) {
     evento.preventDefault();
+    const form = evento.target;
     const nombre = $("nombre-persona");
-    const objetivo = $("objetivo-persona");
-    limpiarErrorCampo(nombre, "error-persona");
-    limpiarErrorCampo(objetivo, "error-persona");
+    limpiarErroresDesglose(form, "error-persona");
 
     if (!nombre.value.trim()) {
         return mostrarErrorCampo(nombre, "error-persona", "Escribe un nombre");
     }
-    // Es opcional: vacío, el servidor pone el objetivo inicial.
-    const importe = objetivo.value.trim() ? leerImporte(objetivo.value) : "";
-    if (importe === null) {
-        return mostrarErrorCampo(objetivo, "error-persona", "Introduce un objetivo mayor que 0, como 1070,50");
-    }
+    // Obligatorio: no hay objetivo por defecto, sale del total del desglose.
+    const { desglose, campo, error } = leerDesglose(form);
+    if (error) return mostrarErrorCampo(campo, "error-persona", error);
 
     const restaurar = ocupar($("btn-persona"), "Guardando…");
     try {
         const persona = await api("/personas", {
             metodo: "POST",
-            datos: { nombre: nombre.value, objetivo: importe },
+            datos: { nombre: nombre.value, desglose },
         });
         avisar(`Persona añadida: ${persona.nombre}`);
-        nombre.value = "";
-        objetivo.value = "";
+        form.reset();
+        pintarTotalFormulario(form);
+        // Si era la primera persona, ya se puede abrir la app.
+        if (!$("vista-bienvenida").hidden) {
+            await mostrarApp();
+            $("principal").focus();   // el formulario ya no se ve: el foco no se pierde
+            return;
+        }
         await cargarPersonas();
     } catch (error) {
         mostrarErrorCampo(nombre, "error-persona", error.message);
@@ -1259,17 +1345,20 @@ document.addEventListener("DOMContentLoaded", () => {
         marcarMesesCompletos();
     });
     prepararCampoFecha($("fecha"));
-    $("form-objetivo").addEventListener("submit", guardarObjetivo);
+    $("form-desglose").addEventListener("submit", guardarDesglose);
+    for (const form of [$("form-desglose"), $("form-persona")]) {
+        form.addEventListener("input", () => pintarTotalFormulario(form));
+    }
     $("lista-transferencias").addEventListener("click", accionLista);
     $("form-persona").addEventListener("submit", agregarPersona);
 
     const dialogo = $("dialogo-ajustes");
     $("btn-ajustes").addEventListener("click", () => dialogo.showModal());
     prepararDialogo(dialogo, $("btn-cerrar-ajustes"));
-    // Al cerrarla se descarta cualquier renombrado a medias o error del objetivo.
+    // Al cerrarla se descarta cualquier renombrado o desglose a medias.
     dialogo.addEventListener("close", () => {
         pintarListaPersonas();
-        limpiarErrorCampo($("nuevo-objetivo"), "error-objetivo");
+        pintarDesglose();
     });
     $("lista-personas").addEventListener("click", accionPersonas);
 

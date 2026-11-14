@@ -10,8 +10,8 @@ import db
 from seguridad import limitador_login
 from logica import (INGRESO, RETIRADA, Conflicto, DatosInvalidos, NoEncontrada,
                     calcular_resumen, validar_descripcion, validar_fecha,
-                    validar_mes, validar_mes_cuenta, validar_monto,
-                    validar_nombre, validar_tipo)
+                    validar_desglose, validar_mes, validar_mes_cuenta,
+                    validar_monto, validar_nombre, validar_tipo)
 
 bp = Blueprint("rutas", __name__)
 
@@ -189,7 +189,7 @@ def eliminar_transferencia(id):
 
 
 # ------------------------
-# RESUMEN Y OBJETIVO
+# RESUMEN Y DESGLOSE
 # ------------------------
 
 @bp.route("/resumen", methods=["GET"])
@@ -223,25 +223,32 @@ def obtener_resumen():
     return jsonify(respuesta)
 
 
-@bp.route("/objetivo", methods=["POST"])
+@bp.route("/desglose", methods=["POST"])
 @login_required
-def guardar_objetivo():
+def guardar_desglose():
+    """Guarda el desglose de gastos de una persona; su objetivo pasa a ser el total."""
     data = leer_json()
-    objetivo = validar_monto(data.get("objetivo"), campo="Objetivo")
+    desglose, objetivo = validar_desglose(data.get("desglose"))
 
     with db.conexion() as conn:
         objetivo_de(conn, data.get("persona"))
-        db.guardar_objetivo(conn, data.get("persona"), objetivo)
+        db.guardar_desglose(conn, data.get("persona"), desglose, objetivo)
 
-    return jsonify({"mensaje": "ok", "objetivo": importe(objetivo)})
+    return jsonify({"mensaje": "ok", "objetivo": importe(objetivo),
+                    "desglose": desglose_a_json(desglose)})
 
 
 # ------------------------
 # PERSONAS
 # ------------------------
 
+def desglose_a_json(desglose):
+    return None if desglose is None else {clave: importe(v) for clave, v in desglose.items()}
+
+
 def persona_a_json(persona):
-    return {**persona, "objetivo": importe(persona["objetivo"])}
+    return {**persona, "objetivo": importe(persona["objetivo"]),
+            "desglose": desglose_a_json(persona["desglose"])}
 
 
 @bp.route("/personas", methods=["GET"])
@@ -257,15 +264,13 @@ def obtener_personas():
 def crear_persona():
     data = leer_json()
     nombre = validar_nombre(data.get("nombre"))
-    if data.get("objetivo") in (None, ""):
-        objetivo = db.OBJETIVO_INICIAL
-    else:
-        objetivo = validar_monto(data.get("objetivo"), campo="Objetivo")
+    # El objetivo no se envía: es el total del desglose.
+    desglose, objetivo = validar_desglose(data.get("desglose"))
 
     with db.conexion() as conn:
         if db.existe_persona(conn, nombre):
             raise Conflicto("Ya existe una persona con ese nombre")
-        nuevo_id = db.insertar_persona(conn, nombre, objetivo)
+        nuevo_id = db.insertar_persona(conn, nombre, desglose, objetivo)
         persona = db.obtener_persona(conn, nuevo_id)
 
     return jsonify(persona_a_json(persona)), 201

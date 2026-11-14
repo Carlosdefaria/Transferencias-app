@@ -56,15 +56,29 @@ def cliente(app):
     return app.test_client()
 
 
+# La app no crea personas al empezar: los tests usan estas, creadas en 'sesion'.
+PERSONAS_TEST = ("Marta", "Juan")
+DESGLOSE_TEST = {"universidad": "570", "alquiler": "500"}   # objetivo: 1070
+
+
 @pytest.fixture
-def sesion(cliente):
-    """Cliente HTTP con la sesión ya iniciada."""
+def sesion_vacia(cliente):
+    """Cliente HTTP con la sesión iniciada y la BD sin personas."""
     respuesta = cliente.post("/login", json={"pin": PIN})
     assert respuesta.status_code == 200
     return cliente
 
 
-def crear(sesion, monto="100", fecha="2026-10-05", persona="Carlos", descripcion=""):
+@pytest.fixture
+def sesion(sesion_vacia):
+    """Cliente HTTP con la sesión iniciada y las personas de PERSONAS_TEST."""
+    for nombre in PERSONAS_TEST:
+        respuesta = sesion_vacia.post("/personas", json={"nombre": nombre, "desglose": DESGLOSE_TEST})
+        assert respuesta.status_code == 201, respuesta.get_json()
+    return sesion_vacia
+
+
+def crear(sesion, monto="100", fecha="2026-10-05", persona="Marta", descripcion=""):
     """Crea una transferencia y devuelve su id."""
     respuesta = sesion.post("/transferencias", json={
         "monto": monto, "fecha": fecha, "persona": persona, "descripcion": descripcion,
