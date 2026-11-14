@@ -257,10 +257,7 @@ def obtener_personas():
 def crear_persona():
     data = leer_json()
     nombre = validar_nombre(data.get("nombre"))
-    if data.get("objetivo") in (None, ""):
-        objetivo = db.OBJETIVO_INICIAL
-    else:
-        objetivo = validar_monto(data.get("objetivo"), campo="Objetivo")
+    objetivo = validar_monto(data.get("objetivo"), campo="Objetivo")
 
     with db.conexion() as conn:
         if db.existe_persona(conn, nombre):

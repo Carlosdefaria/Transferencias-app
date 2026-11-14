@@ -21,9 +21,6 @@ log = logging.getLogger(__name__)
 # convierte a número porque la columna es numérica.
 sqlite3.register_adapter(Decimal, str)
 
-PERSONAS_INICIALES = ("Carlos", "Pito")
-OBJETIVO_INICIAL = Decimal("1070")
-
 
 def conectar():
     database_url = os.environ.get("DATABASE_URL")
@@ -104,12 +101,7 @@ def crear_tablas():
                 CONSTRAINT config_persona_unica UNIQUE (persona)
             )
         """)
-
-        if ejecutar(conn, "SELECT COUNT(*) FROM config").fetchone()[0] == 0:
-            for persona in PERSONAS_INICIALES:
-                ejecutar(conn,
-                         "INSERT INTO config (persona, objetivo_total) VALUES (%s, %s)",
-                         (persona, OBJETIVO_INICIAL))
+        # No se crean personas iniciales: con la BD vacía, la app pide la primera.
 
 
 # ------------------------

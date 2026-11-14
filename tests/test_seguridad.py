@@ -100,15 +100,15 @@ def test_cabeceras_de_seguridad(cliente):
 
 
 def test_respuestas_json_no_se_guardan_en_cache(sesion):
-    assert sesion.get("/resumen?persona=Carlos").headers["Cache-Control"] == "no-store"
+    assert sesion.get("/resumen?persona=Marta").headers["Cache-Control"] == "no-store"
 
 
 def test_peticion_desde_otra_web_se_rechaza(sesion):
-    respuesta = sesion.post("/objetivo", json={"persona": "Carlos", "objetivo": "1"},
+    respuesta = sesion.post("/objetivo", json={"persona": "Marta", "objetivo": "1"},
                             headers={"Origin": "https://web-maliciosa.example"})
     assert respuesta.status_code == 403
     # Desde la propia web sí funciona
-    respuesta = sesion.post("/objetivo", json={"persona": "Carlos", "objetivo": "1"},
+    respuesta = sesion.post("/objetivo", json={"persona": "Marta", "objetivo": "1"},
                             headers={"Origin": "http://localhost"})
     assert respuesta.status_code == 200
 

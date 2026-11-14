@@ -10,7 +10,7 @@ from logica import DatosInvalidos, calcular_resumen, validar_tipo
 
 def crear_retirada(sesion, monto, fecha="2026-11-10", mes_cuenta=None):
     respuesta = sesion.post("/transferencias", json={
-        "monto": monto, "fecha": fecha, "persona": "Carlos",
+        "monto": monto, "fecha": fecha, "persona": "Marta",
         "descripcion": "Regalo", "tipo": "retirada", "mes_cuenta": mes_cuenta})
     assert respuesta.status_code == 201, respuesta.get_json()
     return respuesta.get_json()["id"]
@@ -21,11 +21,11 @@ def confirmar(sesion, id):
 
 
 def resumen(sesion, mes="2026-11"):
-    return sesion.get(f"/resumen?persona=Carlos&mes={mes}").get_json()
+    return sesion.get(f"/resumen?persona=Marta&mes={mes}").get_json()
 
 
 def lista(sesion, mes="2026-11"):
-    return sesion.get(f"/transferencias?persona=Carlos&mes={mes}").get_json()["transferencias"]
+    return sesion.get(f"/transferencias?persona=Marta&mes={mes}").get_json()["transferencias"]
 
 
 # ------------------------
@@ -104,7 +104,7 @@ def test_retirada_para_el_mes_siguiente(sesion):
 
 def test_tipo_invalido(sesion):
     respuesta = sesion.post("/transferencias", json={
-        "monto": "10", "fecha": "2026-11-01", "persona": "Carlos", "tipo": "gasto"})
+        "monto": "10", "fecha": "2026-11-01", "persona": "Marta", "tipo": "gasto"})
     assert respuesta.status_code == 400
 
 

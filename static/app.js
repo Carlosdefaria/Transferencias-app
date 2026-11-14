@@ -224,7 +224,7 @@ function consulta(ruta, parametros) {
 // -----------------------------------------------------
 
 function mostrarVista(id) {
-    for (const vista of ["vista-carga", "vista-login", "vista-app"]) {
+    for (const vista of ["vista-carga", "vista-login", "vista-bienvenida", "vista-app"]) {
         $(vista).hidden = vista !== id;
     }
 }
@@ -248,12 +248,27 @@ async function mostrarApp() {
         mostrarEstadoLista("error", `No se pudieron cargar las personas: ${error.message}`, mostrarApp);
         return;
     }
+    // Con la BD vacía no hay personas: antes de nada se pide la primera.
+    if (!estado.personas.length) {
+        mostrarBienvenida();
+        return;
+    }
+    $("lista-personas").after($("form-persona"));   // vuelve a Ajustes si estaba en la bienvenida
     // Se abre en el mes que se está llenando, no siempre en el del calendario.
     estado.mesPote = await calcularMesPote();
     estado.mes = estado.mesPote;
     pintarMes();
     proponerFecha();
     recargar();
+}
+
+// Pantalla de la primera persona: usa el mismo formulario de "Ajustes"
+// (se mueve el nodo, como en colocarFormularioNueva()). Al añadirla,
+// agregarPersona() vuelve a llamar a mostrarApp().
+function mostrarBienvenida() {
+    $("bienvenida-tarjeta").append($("form-persona"));
+    mostrarVista("vista-bienvenida");
+    $("nombre-persona").focus();
 }
 
 async function iniciar() {
@@ -796,7 +811,7 @@ async function guardarEdicion(evento, id) {
 
     const importe = leerImporte(monto.value);
     if (!importe) {
-        return mostrarErrorCampo(monto, error.id, "Introduce un importe mayor que 0, como 1070,50");
+        return mostrarErrorCampo(monto, error.id, "Introduce un importe mayor que 0, como 250,50");
     }
     if (!fecha.value) {
         return mostrarErrorCampo(fecha, error.id, "Elige una fecha");
@@ -841,7 +856,7 @@ async function agregarTransferencia(evento) {
 
     const importe = leerImporte(monto.value);
     if (!importe) {
-        return mostrarErrorCampo(monto, "error-monto", "Introduce un importe mayor que 0, como 1070,50");
+        return mostrarErrorCampo(monto, "error-monto", "Introduce un importe mayor que 0, como 250,50");
     }
     if (!fecha.value) {
         $("mas-opciones").open = true;   // la fecha está dentro de "Más opciones"
@@ -897,7 +912,7 @@ async function guardarObjetivo(evento) {
 
     const objetivo = leerImporte(input.value);
     if (!objetivo) {
-        return mostrarErrorCampo(input, "error-objetivo", "Introduce un objetivo mayor que 0, como 1070,50");
+        return mostrarErrorCampo(input, "error-objetivo", "Introduce un objetivo mayor que 0, como 250,50");
     }
 
     const restaurar = ocupar(evento.submitter || evento.target.querySelector("button"), "Guardando…");
@@ -1138,10 +1153,10 @@ async function agregarPersona(evento) {
     if (!nombre.value.trim()) {
         return mostrarErrorCampo(nombre, "error-persona", "Escribe un nombre");
     }
-    // Es opcional: vacío, el servidor pone el objetivo inicial.
-    const importe = objetivo.value.trim() ? leerImporte(objetivo.value) : "";
-    if (importe === null) {
-        return mostrarErrorCampo(objetivo, "error-persona", "Introduce un objetivo mayor que 0, como 1070,50");
+    // Obligatorio: no hay un objetivo por defecto.
+    const importe = leerImporte(objetivo.value);
+    if (!importe) {
+        return mostrarErrorCampo(objetivo, "error-persona", "Introduce un objetivo mayor que 0, como 250,50");
     }
 
     const restaurar = ocupar($("btn-persona"), "Guardando…");
@@ -1153,6 +1168,12 @@ async function agregarPersona(evento) {
         avisar(`Persona añadida: ${persona.nombre}`);
         nombre.value = "";
         objetivo.value = "";
+        // Si era la primera persona, ya se puede abrir la app.
+        if (!$("vista-bienvenida").hidden) {
+            await mostrarApp();
+            $("principal").focus();   // el formulario ya no se ve: el foco no se pierde
+            return;
+        }
         await cargarPersonas();
     } catch (error) {
         mostrarErrorCampo(nombre, "error-persona", error.message);

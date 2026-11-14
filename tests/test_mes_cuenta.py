@@ -8,17 +8,17 @@ from logica import DatosInvalidos, validar_mes_cuenta
 
 def crear_para(sesion, monto, fecha, mes_cuenta):
     respuesta = sesion.post("/transferencias", json={
-        "monto": monto, "fecha": fecha, "persona": "Carlos", "mes_cuenta": mes_cuenta})
+        "monto": monto, "fecha": fecha, "persona": "Marta", "mes_cuenta": mes_cuenta})
     assert respuesta.status_code == 201, respuesta.get_json()
     return respuesta.get_json()["id"]
 
 
 def lista(sesion, mes):
-    return sesion.get(f"/transferencias?persona=Carlos&mes={mes}").get_json()["transferencias"]
+    return sesion.get(f"/transferencias?persona=Marta&mes={mes}").get_json()["transferencias"]
 
 
 def resumen(sesion, mes):
-    return sesion.get(f"/resumen?persona=Carlos&mes={mes}").get_json()
+    return sesion.get(f"/resumen?persona=Marta&mes={mes}").get_json()
 
 
 def test_validar_mes_cuenta():
@@ -55,7 +55,7 @@ def test_transferencia_normal_devuelve_el_mes_de_su_fecha(sesion):
 
 def test_no_puede_contar_para_un_mes_pasado(sesion):
     respuesta = sesion.post("/transferencias", json={
-        "monto": "200", "fecha": "2026-10-02", "persona": "Carlos", "mes_cuenta": "2026-09"})
+        "monto": "200", "fecha": "2026-10-02", "persona": "Marta", "mes_cuenta": "2026-09"})
     assert respuesta.status_code == 400
     assert "siguiente" in respuesta.get_json()["error"]
     assert lista(sesion, "2026-09") == []
@@ -77,5 +77,5 @@ def test_editar_cambia_el_mes_de_cuenta(sesion):
 
 def test_mes_cuenta_invalido(sesion):
     respuesta = sesion.post("/transferencias", json={
-        "monto": "10", "fecha": "2026-10-01", "persona": "Carlos", "mes_cuenta": "2026-13"})
+        "monto": "10", "fecha": "2026-10-01", "persona": "Marta", "mes_cuenta": "2026-13"})
     assert respuesta.status_code == 400

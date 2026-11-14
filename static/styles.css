@@ -434,6 +434,18 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
    desplaza el PIN a la izquierda; text-indent lo compensa */
 .login-tarjeta input { text-align: center; font-size: var(--texto-xl); letter-spacing: .4em; text-indent: .4em; }
 
+/* Primera persona (BD vacía): centrada como el login, con el formulario de Ajustes */
+.bienvenida-tarjeta {
+    width: 100%;
+    max-width: 480px;
+    display: grid;
+    gap: .75rem;
+}
+.bienvenida-tarjeta h1 { font-size: var(--texto-xl); text-align: center; }
+.bienvenida-tarjeta > p { text-align: center; }
+/* El título "Añadir persona" del formulario sobra: ya lo dice el h1 */
+.bienvenida-tarjeta .formulario > .subtitulo { display: none; }
+
 .logo {
     width: 56px; height: 56px;
     margin: 0 auto;
