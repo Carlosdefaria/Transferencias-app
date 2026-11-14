@@ -16,6 +16,9 @@ const estado = {
     persona: null,   // se elige al cargar la lista de personas
     personas: [],
     mes: mesActual(),
+    // Mes que se está llenando: el actual o, si ya tiene el objetivo
+    // cumplido, el siguiente. Se calcula al abrir la app (calcularMesPote).
+    mesPote: mesActual(),
     // Cada recarga incrementa este número. Si llega una respuesta de una
     // recarga antigua (por ejemplo, tras cambiar rápido de persona), se ignora.
     version: 0,
@@ -231,14 +234,19 @@ function mostrarLogin(mensaje = "") {
 
 async function mostrarApp() {
     mostrarVista("vista-app");
-    proponerFecha();
     // Sin la lista de personas no se sabe qué datos pedir, así que va primero.
     try {
         await cargarPersonas();
     } catch (error) {
+        proponerFecha();
         mostrarEstadoLista("error", `No se pudieron cargar las personas: ${error.message}`, mostrarApp);
         return;
     }
+    // Se abre en el mes que se está llenando, no siempre en el del calendario.
+    estado.mesPote = await calcularMesPote();
+    estado.mes = estado.mesPote;
+    pintarMes();
+    proponerFecha();
     recargar();
 }
 
@@ -451,12 +459,16 @@ function pintarOpcionesMes(select, fecha, desplazamiento = 0) {
     delete select.dataset.autoElegido;
 }
 
-// Propone en el formulario una fecha del mes que se está viendo: hoy si es el
-// mes actual y, si no, el día 1. Así lo añadido no acaba en otro mes por descuido.
+// Propone en el formulario una fecha que cuente para el mes que se está viendo,
+// para que lo añadido no acabe en otro mes por descuido:
+// - mes actual: hoy;
+// - mes siguiente: hoy como adelanto (una fecha futura no tendría sentido);
+// - cualquier otro: el día 1.
 function proponerFecha() {
-    $("fecha").value = estado.mes === mesActual() ? hoyISO() : `${estado.mes}-01`;
+    const siguiente = estado.mes === sumarMeses(mesActual(), 1);
+    $("fecha").value = estado.mes === mesActual() || siguiente ? hoyISO() : `${estado.mes}-01`;
     pintarFecha($("fecha"));
-    pintarOpcionesMes($("mes-cuenta"), $("fecha").value);
+    pintarOpcionesMes($("mes-cuenta"), $("fecha").value, siguiente ? 1 : 0);
 }
 
 // Si cambia la fecha, se mantiene la elección relativa ("el mes siguiente"),
@@ -465,6 +477,23 @@ function alCambiarFecha(inputFecha, select) {
     const elegida = select.selectedOptions[0];
     const desplazamiento = select.dataset.autoElegido ? 0 : Number(elegida?.dataset.desplazamiento || 0);
     pintarOpcionesMes(select, inputFecha.value, desplazamiento);
+}
+
+// Un mes está completo si lo confirmado llega al objetivo (como la barra verde).
+async function mesCompleto(mes) {
+    const datos = await api(consulta("/resumen", { persona: estado.persona, mes }));
+    return Number(datos.restante) <= 0;
+}
+
+// El mes que se está llenando: el actual o, si ya está completo, el siguiente
+// (no se va más allá, igual que los adelantos). Si falla, el mes actual.
+async function calcularMesPote() {
+    const actual = mesActual();
+    try {
+        return await mesCompleto(actual) ? sumarMeses(actual, 1) : actual;
+    } catch {
+        return actual;
+    }
 }
 
 // Cada comprobación incrementa este número; si llega una respuesta antigua
@@ -485,10 +514,7 @@ async function marcarMesesCompletos() {
     const meses = [...select.options].map((opcion) => opcion.value);
     let completos;
     try {
-        completos = await Promise.all(meses.map(async (mes) => {
-            const datos = await api(consulta("/resumen", { persona: estado.persona, mes }));
-            return Number(datos.restante) <= 0;
-        }));
+        completos = await Promise.all(meses.map(mesCompleto));
     } catch {
         return;   // sin datos, el selector se queda como estaba
     }
@@ -1093,10 +1119,10 @@ function recargar({ silenciosa = false } = {}) {
 function pintarMes() {
     $("filtro-mes").value = estado.mes;
     $("texto-mes").textContent = nombreMes(estado.mes);
-    // El enlace para volver solo tiene sentido si se está viendo otro mes.
+    // El enlace lleva al mes que se está llenando; solo sale si se ve otro.
     const boton = $("btn-mes-actual");
-    boton.hidden = estado.mes === mesActual();
-    boton.textContent = `Volver a ${nombreMes(mesActual()).toLowerCase()}`;
+    boton.hidden = estado.mes === estado.mesPote;
+    boton.textContent = `Volver a ${nombreMes(estado.mesPote).toLowerCase()}`;
 }
 
 function cambiarMes(mes) {
@@ -1136,7 +1162,7 @@ document.addEventListener("DOMContentLoaded", () => {
     $("mes-anterior").addEventListener("click", () => cambiarMes(sumarMeses(estado.mes, -1)));
     $("mes-siguiente").addEventListener("click", () => cambiarMes(sumarMeses(estado.mes, 1)));
     $("btn-mes-actual").addEventListener("click", () => {
-        cambiarMes(mesActual());
+        cambiarMes(estado.mesPote);
         // El enlace se oculta al pulsarlo: el foco pasa a las flechas
         // para no perderlo si se usa el teclado.
         $("mes-anterior").focus();
