@@ -136,7 +136,7 @@ function avisar(texto, tipo = "exito") {
     // para que dé tiempo a leerlos.
     const esError = tipo === "error";
     if (esError) aviso.setAttribute("role", "alert");
-    // Con la ventana de personas abierta, el aviso se muestra dentro de ella.
+    // Con la ventana de ajustes abierta, el aviso se muestra dentro de ella.
     const contenedor = document.querySelector("dialog[open] .avisos") || $("avisos");
     contenedor.append(aviso);
     // Como mucho 3 avisos a la vez: se quitan los más antiguos.
@@ -896,7 +896,6 @@ async function guardarObjetivo(evento) {
         });
         avisar("Objetivo actualizado");
         input.value = "";
-        evento.target.closest("details").open = false;
         recargar({ silenciosa: true });
     } catch (error) {
         mostrarErrorCampo(input, "error-objetivo", error.message);
@@ -910,7 +909,7 @@ async function guardarObjetivo(evento) {
 // PERSONAS
 // -----------------------------------------------------
 
-// Pide las personas al servidor y repinta el selector y la lista de "Personas".
+// Pide las personas al servidor y repinta el selector y la lista de personas de "Ajustes".
 async function cargarPersonas() {
     estado.personas = await api("/personas");
     const nombres = estado.personas.map((p) => p.nombre);
@@ -944,7 +943,7 @@ function pintarSelectorPersonas() {
     selector.replaceChildren(leyenda, ...opciones);
     // Con una sola persona el selector no aporta nada: su nombre ya sale en el resumen.
     selector.hidden = estado.personas.length < 2;
-    pintarTituloNueva();
+    pintarNombrePersona();
 }
 
 // Tipo elegido en el formulario de alta: "ingreso" o "retirada".
@@ -956,6 +955,13 @@ function tipoNuevo() {
 // recibida o una retirada del pote.
 function pintarTituloNueva() {
     $("titulo-nueva").textContent = `Nueva ${nombreTipo(tipoNuevo())} · ${estado.persona}`;
+}
+
+// Textos que nombran a la persona elegida: el formulario de alta y el
+// objetivo de "Ajustes" (que se guarda para esa persona).
+function pintarNombrePersona() {
+    pintarTituloNueva();
+    $("titulo-objetivo").textContent = `Objetivo mensual de ${estado.persona}`;
 }
 
 // Al cambiar el tipo cambian el título, el botón y la etiqueta del mes.
@@ -970,7 +976,7 @@ function elegirPersona(nombre) {
     estado.persona = nombre;
     estado.anunciar = true;
     guardarPreferencia("persona", nombre);
-    pintarTituloNueva();
+    pintarNombrePersona();
     recargar();
 }
 
@@ -1183,15 +1189,18 @@ document.addEventListener("DOMContentLoaded", () => {
     $("lista-transferencias").addEventListener("click", accionLista);
     $("form-persona").addEventListener("submit", agregarPersona);
 
-    const dialogo = $("dialogo-personas");
-    $("btn-personas").addEventListener("click", () => dialogo.showModal());
-    $("btn-cerrar-personas").addEventListener("click", () => dialogo.close());
+    const dialogo = $("dialogo-ajustes");
+    $("btn-ajustes").addEventListener("click", () => dialogo.showModal());
+    $("btn-cerrar-ajustes").addEventListener("click", () => dialogo.close());
     // Un clic en el fondo oscuro (fuera del contenido) también la cierra.
     dialogo.addEventListener("click", (evento) => {
         if (evento.target === dialogo) dialogo.close();
     });
-    // Al cerrarla se descarta cualquier renombrado a medias.
-    dialogo.addEventListener("close", pintarListaPersonas);
+    // Al cerrarla se descarta cualquier renombrado a medias o error del objetivo.
+    dialogo.addEventListener("close", () => {
+        pintarListaPersonas();
+        limpiarErrorCampo($("nuevo-objetivo"), "error-objetivo");
+    });
     $("lista-personas").addEventListener("click", accionPersonas);
 
     iniciar();

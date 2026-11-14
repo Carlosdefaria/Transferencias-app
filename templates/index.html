@@ -60,28 +60,46 @@
                 <span class="cabecera-texto">Control de Transferencias</span>
             </p>
             <div class="cabecera-acciones">
-                <button id="btn-personas" type="button" class="boton fantasma pequeno"
-                        aria-haspopup="dialog" aria-controls="dialogo-personas">Personas</button>
+                <button id="btn-ajustes" type="button" class="boton fantasma pequeno"
+                        aria-haspopup="dialog" aria-controls="dialogo-ajustes">Ajustes</button>
                 <button id="btn-logout" type="button" class="boton fantasma pequeno">Cerrar sesión</button>
             </div>
         </div>
     </header>
 
-    <!-- PERSONAS: ventana modal (<dialog>) que se abre desde la cabecera.
-         El navegador la pone por encima de todo y la cierra con Escape. -->
-    <dialog id="dialogo-personas" class="dialogo" aria-labelledby="titulo-personas">
+    <!-- AJUSTES: ventana modal (<dialog>) que se abre desde la cabecera, con el
+         objetivo mensual y las personas. El navegador la pone por encima de todo
+         y la cierra con Escape. -->
+    <dialog id="dialogo-ajustes" class="dialogo" aria-labelledby="titulo-ajustes">
         <div class="dialogo-cabecera">
-            <h2 id="titulo-personas">Personas</h2>
-            <button id="btn-cerrar-personas" type="button" class="boton icono fantasma" aria-label="Cerrar"><span class="ico ico-cerrar" aria-hidden="true"></span></button>
+            <h2 id="titulo-ajustes">Ajustes</h2>
+            <button id="btn-cerrar-ajustes" type="button" class="boton icono fantasma" aria-label="Cerrar"><span class="ico ico-cerrar" aria-hidden="true"></span></button>
         </div>
 
         <!-- Los avisos van aquí dentro mientras la ventana está abierta; si no, quedarían detrás -->
         <div class="avisos" role="status" aria-live="polite"></div>
 
+        <!-- El objetivo es de la persona elegida: app.js pone su nombre en el título -->
+        <section class="seccion-ajustes" aria-labelledby="titulo-objetivo">
+            <h3 id="titulo-objetivo" class="subtitulo">Objetivo mensual</h3>
+            <form id="form-objetivo" class="formulario" novalidate>
+                <div class="campo">
+                    <label for="nuevo-objetivo" class="etiqueta">Nuevo objetivo (€)</label>
+                    <input id="nuevo-objetivo" type="text" inputmode="decimal" autocomplete="off"
+                           required aria-describedby="ayuda-objetivo error-objetivo">
+                    <p id="ayuda-objetivo" class="ayuda">Se aplica a todos los meses, también a los anteriores.</p>
+                    <p id="error-objetivo" class="error-campo"></p>
+                </div>
+                <button type="submit" class="boton secundario">Guardar objetivo</button>
+            </form>
+        </section>
+
+        <section class="seccion-ajustes" aria-labelledby="titulo-personas">
+        <h3 id="titulo-personas" class="subtitulo">Personas</h3>
         <ul id="lista-personas" class="lista lista-personas"></ul>
 
         <form id="form-persona" class="formulario" novalidate>
-            <h3 class="subtitulo">Añadir persona</h3>
+            <h4 class="subtitulo">Añadir persona</h4>
             <div class="campos-linea">
                 <div class="campo">
                     <label for="nombre-persona" class="etiqueta">Nombre</label>
@@ -97,6 +115,7 @@
             <p id="error-persona" class="error-campo"></p>
             <button id="btn-persona" type="submit" class="boton secundario ancho">Añadir persona</button>
         </form>
+        </section>
     </dialog>
 
     <main id="principal" class="contenedor" tabindex="-1">
@@ -167,20 +186,6 @@
                             <dd id="objetivo">–</dd>
                         </div>
                     </dl>
-
-                    <details class="plegable">
-                        <summary>Cambiar objetivo mensual</summary>
-                        <form id="form-objetivo" class="formulario" novalidate>
-                            <div class="campo">
-                                <label for="nuevo-objetivo" class="etiqueta">Nuevo objetivo (€)</label>
-                                <input id="nuevo-objetivo" type="text" inputmode="decimal" autocomplete="off"
-                                       required aria-describedby="ayuda-objetivo error-objetivo">
-                                <p id="ayuda-objetivo" class="ayuda">Se aplica a todos los meses, también a los anteriores.</p>
-                                <p id="error-objetivo" class="error-campo"></p>
-                            </div>
-                            <button type="submit" class="boton secundario">Guardar objetivo</button>
-                        </form>
-                    </details>
                 </section>
 
                 <!-- NUEVA TRANSFERENCIA -->
@@ -240,14 +245,18 @@
                         <h2 id="titulo-historial" tabindex="-1">Historial del mes</h2>
                         <span id="contador" class="contador"></span>
                     </div>
-                    <!-- Leyenda y ayuda: una sola vez para toda la lista (app.js la oculta si está vacía) -->
+                    <!-- Leyenda y ayuda: una sola vez para toda la lista (app.js la oculta si está vacía).
+                         La ayuda va plegada tras el botón "i" para que la leyenda ocupe una línea. -->
                     <div id="leyenda-historial" class="leyenda-historial" hidden>
                         <p class="leyenda-puntos" aria-hidden="true">
                             <span><span class="movimiento-punto"></span>Confirmada</span>
                             <span><span class="movimiento-punto pendiente"></span>Pendiente</span>
                             <span><span class="movimiento-punto retirada"></span>Retirada</span>
                         </p>
-                        <p class="ayuda">Para editar o eliminar una confirmada, márcala antes como pendiente.</p>
+                        <details class="info">
+                            <summary aria-label="Cómo editar una confirmada"><span class="info-icono" aria-hidden="true">i</span></summary>
+                            <p class="info-texto">Para editar o eliminar una confirmada, márcala antes como pendiente.</p>
+                        </details>
                     </div>
                     <div id="estado-lista" class="estado-lista" aria-live="polite"></div>
                     <ul id="lista-transferencias" class="lista" aria-busy="true"></ul>
@@ -255,7 +264,9 @@
 
                 <!-- DESGLOSE DE GASTOS: leyenda fija con los gastos que cubre el dinero -->
                 <section class="tarjeta" aria-labelledby="titulo-gastos">
-                    <h2 id="titulo-gastos">Desglose de gastos</h2>
+                    <!-- Plegado: es información fija que se consulta poco -->
+                    <details class="plegable">
+                    <summary><h2 id="titulo-gastos">Desglose de gastos</h2></summary>
                     <dl class="cifras cifras-gastos">
                         <div class="cifra">
                             <dt><span aria-hidden="true">🎓</span> Universidad</dt>
@@ -267,6 +278,7 @@
                         </div>
                     </dl>
                     <p class="texto-suave gastos-total">Total: <strong>4029,00 €</strong></p>
+                    </details>
                 </section>
             </div>
         </div>
