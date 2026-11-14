@@ -981,6 +981,135 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     gap: .5rem;
 }
 
+/* ---------- Nueva transferencia (entrada rápida) ----------
+   Es lo que más destaca: borde y fondo del color principal en ordenador y,
+   en móvil, una hoja que sube desde abajo con el botón "+". */
+.tarjeta-alta {
+    border: 2px solid var(--primario);
+    background: color-mix(in srgb, var(--primario) 5%, var(--superficie));
+}
+.cabecera-nueva {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: .5rem;
+    margin-bottom: .75rem;
+}
+/* El ✕ solo tiene sentido dentro de la hoja */
+#tarjeta-nueva #btn-cerrar-nueva { display: none; }
+/* En la tarjeta el título deja sitio al ✕ oculto: misma altura en los dos sitios */
+.cabecera-nueva h2 { min-height: 1.5rem; }
+
+/* Importe grande, como en una calculadora */
+.importe-grande {
+    display: flex;
+    align-items: baseline;
+    gap: .25rem;
+    padding: .5rem 1rem;
+    border: 2px solid var(--borde-campo);
+    border-radius: var(--radio);
+    background: var(--superficie);
+}
+.importe-grande:focus-within {
+    border-color: var(--primario);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primario) 25%, transparent);
+}
+.importe-grande:has([aria-invalid="true"]) { border-color: var(--peligro); }
+.importe-grande input {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+    min-height: auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    text-align: right;
+    font-size: 2.5rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
+}
+/* El recuadro ya marca el foco: sin el contorno del campo */
+.importe-grande input:focus-visible { outline: none; }
+.importe-grande > span {
+    font-size: var(--texto-2xl);
+    font-weight: 700;
+    color: var(--texto-suave);
+}
+
+/* Botones que resumen fecha, pote y tipo; abren "Más opciones" */
+.valores {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: .5rem;
+}
+.valor {
+    min-height: 2.25rem;
+    padding: .25rem .75rem;
+    border: 1px solid var(--borde);
+    border-radius: 999px;
+    background: var(--superficie);
+    color: var(--texto);
+    font: inherit;
+    font-size: var(--texto-sm);
+    font-weight: 600;
+    cursor: pointer;
+}
+.valor:hover { border-color: var(--primario); color: var(--primario); }
+
+.mas-opciones { margin-top: 0; border-top: 1px solid var(--borde); }
+.mas-opciones summary { color: var(--primario); }
+.mas-opciones[open] > .formulario { margin-top: .25rem; }
+
+.boton.grande { min-height: 3rem; font-size: var(--texto-lg); }
+
+/* Botón "+" (solo móvil y tablet) */
+.fab {
+    position: fixed;
+    right: max(1rem, calc(env(safe-area-inset-right) + 1rem));
+    bottom: max(1rem, calc(env(safe-area-inset-bottom) + 1rem));
+    z-index: 40;
+    display: grid;
+    place-items: center;
+    width: 3.5rem;
+    height: 3.5rem;
+    border: 0;
+    border-radius: 50%;
+    background: var(--primario);
+    color: var(--texto-sobre-primario);
+    font: inherit;
+    font-size: 2rem;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: var(--sombra-aviso);
+    touch-action: manipulation;
+}
+.fab:hover { background: var(--primario-hover); }
+
+/* Hoja inferior: pegada abajo, a lo ancho (como mucho 560 px en tablet) */
+.dialogo.hoja {
+    width: min(100%, 560px);
+    max-width: 100%;
+    max-height: 90dvh;
+    margin: auto auto 0;
+    padding-bottom: max(1rem, calc(env(safe-area-inset-bottom) + .5rem));
+    border-bottom: 0;
+    border-radius: 20px 20px 0 0;
+}
+.dialogo.hoja[open] { animation: subir .2s ease-out; }
+@keyframes subir { from { transform: translateY(30%); opacity: .5; } }
+
+@media (max-width: 899px) {
+    /* Deja sitio al botón "+" al final de la página y sube los avisos por encima */
+    .contenedor { padding-bottom: 6rem; }
+    #avisos { bottom: max(5.5rem, calc(env(safe-area-inset-bottom) + 5.5rem)); }
+}
+@media (min-width: 900px) {
+    .fab { display: none; }
+}
+
 /* ---------- Ajustes (objetivo y personas) ---------- */
 .seccion-ajustes { margin-top: 1rem; }
 .seccion-ajustes + .seccion-ajustes {

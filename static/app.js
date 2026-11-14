@@ -53,6 +53,12 @@ function nombreMes(mes) {
     return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
+// "2026-11" → "noviembre" (con el año solo si no es el actual: "enero de 2027").
+function nombreMesCorto(mes) {
+    const nombre = nombreMes(mes).toLowerCase();
+    return mes.startsWith(mesActual().slice(0, 4)) ? nombre.replace(/ de \d{4}$/, "") : nombre;
+}
+
 // "2026-10-28" → "28/10/2026"
 function formatearFechaNumerica(iso) {
     const [anio, mes, dia] = iso.split("-");
@@ -469,6 +475,7 @@ function proponerFecha() {
     $("fecha").value = estado.mes === mesActual() || siguiente ? hoyISO() : `${estado.mes}-01`;
     pintarFecha($("fecha"));
     pintarOpcionesMes($("mes-cuenta"), $("fecha").value, siguiente ? 1 : 0);
+    pintarValoresNueva();
 }
 
 // Si cambia la fecha, se mantiene la elección relativa ("el mes siguiente"),
@@ -546,6 +553,7 @@ async function marcarMesesCompletos() {
     } else {
         ayuda.textContent = ayuda.dataset.normal;
     }
+    pintarValoresNueva();
 }
 
 
@@ -667,8 +675,9 @@ function crearElemento(t) {
     return elemento;
 }
 
+// En móvil el formulario está en la hoja (se abre); en ordenador, en la página.
 function abrirFormularioNueva() {
-    $("plegable-nueva").open = true;
+    if (PANTALLA_ESTRECHA.matches) $("dialogo-nueva").showModal();
     $("monto").focus();
 }
 
@@ -835,6 +844,7 @@ async function agregarTransferencia(evento) {
         return mostrarErrorCampo(monto, "error-monto", "Introduce un importe mayor que 0, como 1070,50");
     }
     if (!fecha.value) {
+        $("mas-opciones").open = true;   // la fecha está dentro de "Más opciones"
         return mostrarErrorCampo(fecha, "error-fecha", "Elige una fecha");
     }
 
@@ -853,6 +863,8 @@ async function agregarTransferencia(evento) {
                 tipo,
             },
         });
+        // En móvil se cierra la hoja antes del aviso, para que salga en la página.
+        if (PANTALLA_ESTRECHA.matches) $("dialogo-nueva").close();
         avisar(`${nombreTipoFrase(tipo)} añadida a ${nombreMes(mesCuenta).toLowerCase()}`);
         monto.value = "";
         $("descripcion").value = "";
@@ -860,8 +872,8 @@ async function agregarTransferencia(evento) {
         $("tipo-ingreso").checked = true;
         // La próxima vuelve a contar por defecto para el mes de su fecha.
         pintarOpcionesMes($("mes-cuenta"), fecha.value);
-        // En móvil se pliega el formulario para ver el historial.
-        if (PANTALLA_ESTRECHA.matches) $("plegable-nueva").open = false;
+        // Vuelve a la entrada rápida: solo el importe a la vista.
+        $("mas-opciones").open = false;
         // Se muestra el mes para el que cuenta la transferencia recién creada.
         await cambiarMes(mesCuenta);
         $("lista-transferencias").querySelector(`.movimiento[data-id="${id}"]`)?.classList.add("recien");
@@ -970,6 +982,47 @@ function pintarTipoNuevo() {
     pintarTituloNueva();
     $("btn-agregar").textContent = retirada ? "Añadir retirada" : "Añadir transferencia";
     $("etiqueta-mes-cuenta").textContent = retirada ? "Del pote de" : "Para el pote de";
+    pintarValoresNueva();
+}
+
+// Entrada rápida: los botones .valor resumen lo que se usará si no se abre
+// "Más opciones" (fecha, mes del pote y tipo), con los mismos datos del formulario.
+function pintarValoresNueva() {
+    const fecha = $("fecha").value;
+    const mes = $("mes-cuenta").value;
+    const retirada = tipoNuevo() === "retirada";
+    const textos = {
+        "fecha": fecha ? (fecha === hoyISO() ? "Hoy, " : "") + formatearFechaNumerica(fecha) : "Elige una fecha",
+        "mes-cuenta": mes ? `${retirada ? "Del pote de" : "Pote de"} ${nombreMesCorto(mes)}` : "",
+        "tipo-ingreso": retirada ? "Retirada del pote" : "Recibida",
+    };
+    for (const boton of document.querySelectorAll("#form-nueva .valor")) {
+        boton.querySelector(".valor-texto").textContent = textos[boton.dataset.campo];
+    }
+}
+
+// Al pulsar un valor se abre "Más opciones" con el foco en ese campo.
+function abrirOpcion(evento) {
+    const boton = evento.target.closest(".valor");
+    if (!boton) return;
+    $("mas-opciones").open = true;
+    // En el tipo, el foco va a la opción marcada (así funcionan los radios con teclado)
+    const campo = boton.dataset.campo === "tipo-ingreso"
+        ? document.querySelector("#form-nueva input[name=tipo]:checked")
+        : $(boton.dataset.campo);
+    campo.focus();
+    campo.scrollIntoView({ block: "nearest" });
+}
+
+// Móvil: el formulario va en la hoja (#dialogo-nueva) y la tarjeta se oculta.
+// Ordenador: vuelve a la tarjeta. Se mueve el mismo nodo, así que no se pierde
+// lo escrito ni los "escuchadores".
+function colocarFormularioNueva() {
+    const movil = PANTALLA_ESTRECHA.matches;
+    const dialogo = $("dialogo-nueva");
+    if (!movil && dialogo.open) dialogo.close();
+    (movil ? dialogo : $("tarjeta-nueva")).append($("contenido-nueva"));
+    $("tarjeta-nueva").hidden = movil;
 }
 
 function elegirPersona(nombre) {
@@ -1144,6 +1197,21 @@ function cambiarMes(mes) {
 }
 
 
+// Ventanas modales: se cierran con su botón ✕, con Escape (lo hace el
+// navegador) o con un clic en el fondo oscuro, fuera del contenido.
+function prepararDialogo(dialogo, botonCerrar) {
+    botonCerrar.addEventListener("click", () => dialogo.close());
+    dialogo.addEventListener("click", (evento) => {
+        // El relleno de la ventana también es el propio <dialog>: se mira si
+        // el clic cayó fuera de su recuadro para no cerrarla por error.
+        const caja = dialogo.getBoundingClientRect();
+        const fuera = evento.clientX < caja.left || evento.clientX > caja.right
+            || evento.clientY < caja.top || evento.clientY > caja.bottom;
+        if (evento.target === dialogo && fuera) dialogo.close();
+    });
+}
+
+
 // -----------------------------------------------------
 // ARRANQUE
 // -----------------------------------------------------
@@ -1175,13 +1243,19 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     $("btn-reintentar-resumen").addEventListener("click", recargar);
-    $("plegable-nueva").open = !PANTALLA_ESTRECHA.matches;
+    colocarFormularioNueva();
+    PANTALLA_ESTRECHA.addEventListener("change", colocarFormularioNueva);
     $("form-nueva").addEventListener("submit", agregarTransferencia);
+    $("form-nueva").addEventListener("click", abrirOpcion);
+    $("mes-cuenta").addEventListener("change", pintarValoresNueva);
+    prepararDialogo($("dialogo-nueva"), $("btn-cerrar-nueva"));
+    $("btn-nueva").addEventListener("click", abrirFormularioNueva);
     for (const radio of document.querySelectorAll("#form-nueva input[name=tipo]")) {
         radio.addEventListener("change", pintarTipoNuevo);
     }
     $("fecha").addEventListener("change", () => {
         alCambiarFecha($("fecha"), $("mes-cuenta"));
+        pintarValoresNueva();
         marcarMesesCompletos();
     });
     prepararCampoFecha($("fecha"));
@@ -1191,11 +1265,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const dialogo = $("dialogo-ajustes");
     $("btn-ajustes").addEventListener("click", () => dialogo.showModal());
-    $("btn-cerrar-ajustes").addEventListener("click", () => dialogo.close());
-    // Un clic en el fondo oscuro (fuera del contenido) también la cierra.
-    dialogo.addEventListener("click", (evento) => {
-        if (evento.target === dialogo) dialogo.close();
-    });
+    prepararDialogo(dialogo, $("btn-cerrar-ajustes"));
     // Al cerrarla se descarta cualquier renombrado a medias o error del objetivo.
     dialogo.addEventListener("close", () => {
         pintarListaPersonas();

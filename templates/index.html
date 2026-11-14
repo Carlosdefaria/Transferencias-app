@@ -146,6 +146,79 @@
 
         <div class="rejilla">
             <div class="columna">
+                <!-- NUEVA TRANSFERENCIA: lo primero de la página en ordenador.
+                     En móvil, app.js mueve #contenido-nueva a la hoja #dialogo-nueva
+                     (se abre con el botón "+") y esta tarjeta queda oculta. -->
+                <section id="tarjeta-nueva" class="tarjeta tarjeta-alta" aria-labelledby="titulo-nueva">
+                    <div id="contenido-nueva">
+                    <div class="cabecera-nueva">
+                        <h2 id="titulo-nueva">Nueva transferencia</h2>
+                        <!-- Solo se ve dentro de la hoja (móvil) -->
+                        <button id="btn-cerrar-nueva" type="button" class="boton icono fantasma" aria-label="Cerrar"><span class="ico ico-cerrar" aria-hidden="true"></span></button>
+                    </div>
+                    <form id="form-nueva" class="formulario" novalidate>
+                        <!-- Entrada rápida: a la vista solo el importe. El resto ya viene
+                             propuesto y se resume en los botones .valor -->
+                        <div class="campo">
+                            <label for="monto" class="sr-only">Importe en euros</label>
+                            <div class="importe-grande">
+                                <input id="monto" type="text" inputmode="decimal" autocomplete="off"
+                                       placeholder="0,00" required aria-describedby="error-monto">
+                                <span aria-hidden="true">€</span>
+                            </div>
+                            <p id="error-monto" class="error-campo"></p>
+                        </div>
+
+                        <!-- Lo que se usará si no se cambia nada (los textos los pone app.js).
+                             Al pulsar uno se abre "Más opciones" en su campo. -->
+                        <div class="valores">
+                            <button type="button" class="valor" data-campo="fecha"><span class="sr-only">Fecha: </span><span class="valor-texto"></span></button>
+                            <button type="button" class="valor" data-campo="mes-cuenta"><span class="valor-texto"></span></button>
+                            <button type="button" class="valor" data-campo="tipo-ingreso"><span class="sr-only">Tipo: </span><span class="valor-texto"></span></button>
+                        </div>
+
+                        <details id="mas-opciones" class="plegable mas-opciones">
+                            <summary>Más opciones</summary>
+                            <div class="formulario">
+                                <!-- Una retirada es dinero que se coge del pote: resta en vez de sumar -->
+                                <fieldset class="segmentado selector-tipo">
+                                    <legend class="sr-only">Tipo de movimiento</legend>
+                                    <input type="radio" name="tipo" id="tipo-ingreso" value="ingreso" checked>
+                                    <label for="tipo-ingreso">Recibida</label>
+                                    <input type="radio" name="tipo" id="tipo-retirada" value="retirada">
+                                    <label for="tipo-retirada">Retirada del pote</label>
+                                </fieldset>
+                                <div class="campos-linea">
+                                    <div class="campo">
+                                        <label for="fecha" class="etiqueta">Fecha</label>
+                                        <!-- La fecha se muestra como DD/MM/AAAA; el campo nativo queda encima,
+                                             invisible, para que al tocar se abra el calendario -->
+                                        <div class="caja-fecha">
+                                            <span class="texto-fecha" aria-hidden="true"></span>
+                                            <input id="fecha" type="date" required aria-describedby="error-fecha">
+                                        </div>
+                                        <p id="error-fecha" class="error-campo"></p>
+                                    </div>
+                                    <div class="campo">
+                                        <label id="etiqueta-mes-cuenta" for="mes-cuenta" class="etiqueta">Para el pote de</label>
+                                        <!-- Las opciones (el mes de la fecha y el siguiente) las crea app.js; si un mes ya tiene el objetivo cumplido, se desactiva -->
+                                        <select id="mes-cuenta" aria-describedby="ayuda-mes-cuenta"></select>
+                                    </div>
+                                </div>
+                                <p id="ayuda-mes-cuenta" class="ayuda">Cámbialo si es un adelanto para el mes siguiente.</p>
+                                <div class="campo">
+                                    <label for="descripcion" class="etiqueta">Descripción <span class="texto-suave">(opcional)</span></label>
+                                    <input id="descripcion" type="text" maxlength="200" autocomplete="off">
+                                </div>
+                            </div>
+                        </details>
+
+                        <p id="error-nueva" class="error-campo" role="alert"></p>
+                        <button id="btn-agregar" type="submit" class="boton primario ancho grande">Añadir transferencia</button>
+                    </form>
+                    </div>
+                </section>
+
                 <!-- RESUMEN DEL MES -->
                 <section id="resumen" class="tarjeta resumen" aria-labelledby="titulo-resumen" aria-busy="true">
                     <h2 id="titulo-resumen">Resumen</h2>
@@ -188,53 +261,6 @@
                     </dl>
                 </section>
 
-                <!-- NUEVA TRANSFERENCIA -->
-                <section class="tarjeta" aria-labelledby="titulo-nueva">
-                    <!-- En móvil empieza plegado (app.js), para que el historial quede cerca del resumen -->
-                    <details id="plegable-nueva" class="plegable" open>
-                    <summary><h2 id="titulo-nueva">Nueva transferencia</h2></summary>
-                    <form id="form-nueva" class="formulario" novalidate>
-                        <!-- Una retirada es dinero que se coge del pote: resta en vez de sumar -->
-                        <fieldset class="segmentado selector-tipo">
-                            <legend class="sr-only">Tipo de movimiento</legend>
-                            <input type="radio" name="tipo" id="tipo-ingreso" value="ingreso" checked>
-                            <label for="tipo-ingreso">Recibida</label>
-                            <input type="radio" name="tipo" id="tipo-retirada" value="retirada">
-                            <label for="tipo-retirada">Retirada del pote</label>
-                        </fieldset>
-                        <div class="campos-linea">
-                            <div class="campo">
-                                <label for="monto" class="etiqueta">Importe (€)</label>
-                                <input id="monto" type="text" inputmode="decimal" autocomplete="off"
-                                       required aria-describedby="error-monto">
-                                <p id="error-monto" class="error-campo"></p>
-                            </div>
-                            <div class="campo">
-                                <label for="fecha" class="etiqueta">Fecha</label>
-                                <!-- La fecha se muestra como DD/MM/AAAA; el campo nativo queda encima,
-                                     invisible, para que al tocar se abra el calendario -->
-                                <div class="caja-fecha">
-                                    <span class="texto-fecha" aria-hidden="true"></span>
-                                    <input id="fecha" type="date" required aria-describedby="error-fecha">
-                                </div>
-                                <p id="error-fecha" class="error-campo"></p>
-                            </div>
-                        </div>
-                        <div class="campo">
-                            <label id="etiqueta-mes-cuenta" for="mes-cuenta" class="etiqueta">Para el pote de</label>
-                            <!-- Las opciones (el mes de la fecha y el siguiente) las crea app.js; si un mes ya tiene el objetivo cumplido, se desactiva -->
-                            <select id="mes-cuenta" aria-describedby="ayuda-mes-cuenta"></select>
-                            <p id="ayuda-mes-cuenta" class="ayuda">Cámbialo si es un adelanto para el mes siguiente.</p>
-                        </div>
-                        <div class="campo">
-                            <label for="descripcion" class="etiqueta">Descripción <span class="texto-suave">(opcional)</span></label>
-                            <input id="descripcion" type="text" maxlength="200" autocomplete="off">
-                        </div>
-                        <p id="error-nueva" class="error-campo" role="alert"></p>
-                        <button id="btn-agregar" type="submit" class="boton primario ancho">Añadir transferencia</button>
-                    </form>
-                    </details>
-                </section>
             </div>
 
             <div class="columna">
@@ -283,6 +309,16 @@
             </div>
         </div>
     </main>
+
+    <!-- Móvil: botón "+" siempre visible que abre la hoja con el formulario de alta.
+         En ordenador se oculta (styles.css): el formulario ya está en la página. -->
+    <button id="btn-nueva" type="button" class="fab" aria-label="Nueva transferencia"
+            aria-haspopup="dialog" aria-controls="dialogo-nueva"><span aria-hidden="true">+</span></button>
+
+    <!-- Hoja inferior (móvil): app.js mete aquí #contenido-nueva -->
+    <dialog id="dialogo-nueva" class="dialogo hoja" aria-labelledby="titulo-nueva">
+        <div class="avisos" role="status" aria-live="polite"></div>
+    </dialog>
 </div>
 
 <!-- Plantilla de una transferencia del historial (la rellena app.js) -->
